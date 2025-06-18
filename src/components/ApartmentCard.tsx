@@ -83,7 +83,7 @@ const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment }) => {
         </div>
         
         <Link
-          to={`/apartment/${apartment.id}`}
+          to={`/catalog/apartment/${apartment.id}`}
           className="block w-full bg-primary text-white text-center py-2 rounded-md hover:bg-primary/90 transition-colors duration-200 font-medium"
         >
           Ver Detalhes

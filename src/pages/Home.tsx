@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, MapPin, Shield, Star, Users, Wifi, Car } from 'lucide-react';
+import { ArrowRight, MapPin, Shield, Star, Users, Wifi, Car, Dumbbell, Briefcase, WashingMachine, ChevronDown } from 'lucide-react';
+import ImageCarousel from '../components/ImageCarousel';
 
 const Home: React.FC = () => {
   const features = [
@@ -8,11 +9,6 @@ const Home: React.FC = () => {
       icon: MapPin,
       title: 'Localização Privilegiada',
       description: 'No coração de São Paulo, próximo aos principais pontos turísticos e comerciais.',
-    },
-    {
-      icon: Shield,
-      title: 'Segurança 24h',
-      description: 'Portaria 24 horas, sistema de monitoramento e controle de acesso.',
     },
     {
       icon: Star,
@@ -30,10 +26,44 @@ const Home: React.FC = () => {
     
     { icon: Car, name: 'Estacionamento' },
     { icon: Shield, name: 'Segurança' },
-    { icon: Star, name: 'Academia' },
-    { icon: Star, name: 'Coworking' },
-    { icon: Star, name: 'Lavanderia' },
+    { icon: Dumbbell, name: 'Academia' },
+    { icon: Briefcase, name: 'Coworking' },
+    { icon: WashingMachine, name: 'Lavanderia' },
   ];
+
+  const faqs = [
+    {
+      question: 'Qual a diferença entre moradia fixa e temporada?',
+      answer: 'Moradia fixa refere-se a aluguéis de longo prazo, geralmente com contratos anuais, para quem busca residência permanente. Moradia por temporada é para estadias curtas, como viagens a trabalho ou lazer, com contratos flexíveis e duração predeterminada.'
+    },
+    {
+      question: 'Quais documentos preciso para alugar um apartamento para moradia fixa?',
+      answer: 'Geralmente são solicitados RG, CPF, comprovante de renda (holerite ou declaração de IR), comprovante de residência e, em alguns casos, referências. Para autônomos ou profissionais liberais, podem ser solicitados extratos bancários e declaração de imposto de renda.'
+    },
+    {
+      question: 'O que está incluso no valor do aluguel de temporada?',
+      answer: 'Para aluguéis de temporada, o valor geralmente inclui todas as despesas como condomínio, IPTU, água, luz, gás e internet. Em alguns casos, serviços de limpeza e roupa de cama/banho também podem estar inclusos. Verifique sempre os detalhes na descrição do apartamento.'
+    },
+    {
+      question: 'Como funciona o pagamento do aluguel?',
+      answer: 'Para moradia fixa, o pagamento é mensal, geralmente por boleto ou transferência bancária. Para temporada, o pagamento pode ser feito integralmente no ato da reserva ou em parcelas, dependendo do período e do acordo, com um sinal no momento da reserva e o restante antes do check-in.'
+    },
+    {
+      question: 'Os apartamentos são mobiliados?',
+      answer: 'Sim, todos os nossos apartamentos são completamente mobiliados e equipados com tudo o que você precisa, desde eletrodomésticos até utensílios de cozinha e roupas de cama. Isso proporciona conforto e praticidade desde o primeiro dia.'
+    },
+    {
+      question: 'Posso visitar os apartamentos antes de alugar?',
+      answer: 'Sim, é possível agendar uma visita para conhecer os apartamentos de seu interesse. Entre em contato conosco pelo WhatsApp ou telefone para verificar a disponibilidade e marcar um horário.'
+    }
+  ];
+
+  const [selectedCondominium, setSelectedCondominium] = useState<'museu' | 'fico'>('museu');
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+
+  const toggleFaq = (index: number) => {
+    setOpenFaqIndex(openFaqIndex === index ? null : index);
+  };
 
   return (
     <div 
@@ -41,7 +71,7 @@ const Home: React.FC = () => {
       style={{
         backgroundImage: 'url(https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1920&h=1080&fit=crop)',
         backgroundAttachment: 'fixed',
-        backgroundSize: 'cover',
+        backgroundSize: 'auto 100%',
         backgroundPosition: 'center',
         backgroundColor: '#FFFDFA' // Fundo base caso a imagem não carregue ou para complementar
       }}
@@ -55,7 +85,7 @@ const Home: React.FC = () => {
         />
         <div className="relative z-10 text-center text-gray-900 max-w-4xl mx-auto px-4 pt-32">
           <h1 className="text-4xl md:text-5xl font-bold mb-10 leading-tight text-gray-900">
-            Apartamentos de luxo para moradia fixa e temporada no centro de São Paulo
+            Studios e Kitnets para moradia fixa e temporada no centro de São Paulo
           </h1>
           <Link
             to="/catalog"
@@ -78,8 +108,8 @@ const Home: React.FC = () => {
               <p className="text-lg text-gray-600 mb-8">
                 O Casarão Ipiranga oferece apartamentos completamente mobiliados e equipados, 
                 ideais tanto para quem busca uma moradia fixa quanto para estadias temporárias. 
-                Nossa localização privilegiada no centro da cidade garante fácil acesso a 
-                restaurantes, teatros, museus e transporte público.
+                Nossa localização privilegiada no bairro mais importante do país, garantindo fácil acesso a 
+                restaurantes, teatros, museus, transporte público e muito mais.
               </p>
               <div className="grid grid-cols-2 gap-4">
                 {amenities.map((amenity, index) => {
@@ -93,12 +123,24 @@ const Home: React.FC = () => {
                 })}
               </div>
             </div>
-            <div className="relative">
-              <img
-                src="https://images.unsplash.com/photo-1560449752-0d8b825b101a?w=600&h=400&fit=crop"
-                alt="Interior do apartamento"
-                className="rounded-lg shadow-xl"
-              />
+            <div>
+              <div className="flex space-x-4 mb-6">
+                <button 
+                  onClick={() => setSelectedCondominium('museu')}
+                  className={`px-6 py-2 rounded-lg text-lg font-semibold transition-colors duration-300 
+                    ${selectedCondominium === 'museu' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                >
+                  Casarão Museu
+                </button>
+                <button 
+                  onClick={() => setSelectedCondominium('fico')}
+                  className={`px-6 py-2 rounded-lg text-lg font-semibold transition-colors duration-300 
+                    ${selectedCondominium === 'fico' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                >
+                  Casarão Fico
+                </button>
+              </div>
+              <ImageCarousel condominium={selectedCondominium} />
             </div>
           </div>
         </div>
@@ -117,7 +159,7 @@ const Home: React.FC = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-4xl mx-auto">
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
@@ -134,6 +176,42 @@ const Home: React.FC = () => {
                 </div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-16 bg-white bg-opacity-85">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Perguntas Frequentes
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Encontre respostas para as dúvidas mais comuns sobre nossos apartamentos.
+            </p>
+          </div>
+          <div className="space-y-6 bg-white bg-opacity-70 rounded-lg p-6">
+            {faqs.map((faq, index) => (
+              <div key={index} className="border-b border-gray-200 pb-4 last:border-b-0">
+                <button 
+                  className="flex justify-between items-center w-full text-left focus:outline-none py-2"
+                  onClick={() => toggleFaq(index)}
+                >
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    {faq.question}
+                  </h3>
+                  <ChevronDown 
+                    className={`h-5 w-5 text-gray-500 transform transition-transform duration-300 ${openFaqIndex === index ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {openFaqIndex === index && (
+                  <p className="text-gray-700 leading-relaxed mt-2">
+                    {faq.answer}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </section>

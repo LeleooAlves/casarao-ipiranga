@@ -32,7 +32,7 @@ const Reviews: React.FC = () => {
       style={{
         backgroundImage: 'url(/background/Avaliações.png)',
         backgroundAttachment: 'fixed',
-        backgroundSize: 'cover',
+        backgroundSize: 'auto 100%',
         backgroundPosition: 'center',
       }}
     >

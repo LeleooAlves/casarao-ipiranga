@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -24,16 +24,19 @@ const ApartmentDetails: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState('overview');
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
-    phone: '',
     checkIn: '',
     checkOut: '',
-    message: '',
-    type: 'temporary' as 'fixed' | 'temporary'
+    type: 'temporary' as 'fixed' | 'temporary' | 'both'
   });
 
   const apartment = apartments.find(apt => apt.id === id);
   const apartmentReviews = reviews.filter(review => review.apartmentId === id);
+
+  useEffect(() => {
+    if (apartment) {
+      setFormData(prev => ({ ...prev, type: apartment.type }));
+    }
+  }, [apartment]);
 
   if (!apartment) {
     return (
@@ -64,15 +67,36 @@ const ApartmentDetails: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically send the form data to your backend
-    alert('Solicitação enviada! Entraremos em contato em breve.');
+
+    const whatsappNumber = "5511912131333"; // Número de WhatsApp
+
+    let message = `Olá! Tenho interesse no apartamento "${apartment.title}".\n\n`;
+    message += `*Nome Completo*: ${formData.name}\n`;
+
+    if (apartment.type === 'temporary' || apartment.type === 'both') {
+      message += `*Tipo de Interesse*: Temporada\n`;
+      if (formData.checkIn) {
+        message += `*Check-in*: ${formData.checkIn}\n`;
+      }
+      if (formData.checkOut) {
+        message += `*Check-out*: ${formData.checkOut}\n`;
+      }
+    } else {
+      message += `*Tipo de Interesse*: Moradia Fixa\n`;
+    }
+
+    message += `\nPor favor, me confirme a disponibilidade.`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+
+    window.open(whatsappUrl, '_blank');
+
+    // Opcional: Limpar o formulário após o envio
     setFormData({
       name: '',
-      email: '',
-      phone: '',
       checkIn: '',
       checkOut: '',
-      message: '',
       type: 'temporary'
     });
   };
@@ -85,7 +109,7 @@ const ApartmentDetails: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-32">
+    <div className="min-h-screen bg-gray-50 pt-64">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <Link 
@@ -150,15 +174,15 @@ const ApartmentDetails: React.FC = () => {
 
             {/* Apartment Info */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
+              <div className="flex flex-col sm:flex-row justify-between items-start mb-4">
+                <div className="w-full sm:w-auto mb-4 sm:mb-0">
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">{apartment.title}</h1>
-                  <div className="flex items-center text-gray-600 mb-4">
+                  <div className="flex items-center text-gray-600">
                     <MapPin className="h-4 w-4 mr-1" />
                     <span>{apartment.location.address}</span>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="w-full sm:w-auto text-right">
                   <div className="text-2xl font-bold text-primary">
                     {formatPrice(apartment.price.monthly)}/mês
                   </div>
@@ -168,7 +192,7 @@ const ApartmentDetails: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-6 mb-6">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-4 mb-6 sm:space-x-6">
                 <div className="flex items-center">
                   <Bed className="h-5 w-5 mr-2 text-gray-500" />
                   <span>{apartment.bedrooms} quartos</span>
@@ -185,7 +209,7 @@ const ApartmentDetails: React.FC = () => {
 
               {/* Tabs */}
               <div className="border-b border-gray-200 mb-6">
-                <nav className="flex space-x-8">
+                <nav className="flex flex-wrap gap-x-4 sm:space-x-8">
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
@@ -299,57 +323,12 @@ const ApartmentDetails: React.FC = () => {
                   />
                 </div>
 
-                <div>
-                  <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo de Interesse
-                  </label>
-                  <select
-                    id="type"
-                    name="type"
-                    value={formData.type}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="temporary">Temporada</option>
-                    <option value="fixed">Moradia Fixa</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    required
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Telefone
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    required
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
-
-                {formData.type === 'temporary' && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="checkIn" className="block text-sm font-medium text-gray-700 mb-1">
-                        Check-in
+                {/* Check-in e Check-out condicional */}
+                {(apartment.type === 'temporary' || apartment.type === 'both') && (
+                  <>
+                    <div className="mb-4">
+                      <label htmlFor="checkIn" className="block text-sm font-medium text-gray-700 mb-2">
+                        Check-in (opcional)
                       </label>
                       <input
                         type="date"
@@ -360,9 +339,9 @@ const ApartmentDetails: React.FC = () => {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                       />
                     </div>
-                    <div>
-                      <label htmlFor="checkOut" className="block text-sm font-medium text-gray-700 mb-1">
-                        Check-out
+                    <div className="mb-4">
+                      <label htmlFor="checkOut" className="block text-sm font-medium text-gray-700 mb-2">
+                        Check-out (opcional)
                       </label>
                       <input
                         type="date"
@@ -373,29 +352,14 @@ const ApartmentDetails: React.FC = () => {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                       />
                     </div>
-                  </div>
+                  </>
                 )}
-
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
-                    Mensagem (opcional)
-                  </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    rows={3}
-                    value={formData.message}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                    placeholder="Conte-nos mais sobre suas necessidades..."
-                  />
-                </div>
 
                 <button
                   type="submit"
-                  className="w-full bg-primary text-white py-3 rounded-md hover:bg-primary/90 transition-colors duration-200 font-medium"
+                  className="w-full bg-primary text-white py-3 px-4 rounded-md font-semibold hover:bg-primary/90 transition-colors duration-300"
                 >
-                  Enviar Solicitação
+                  Enviar informações no WhatsApp
                 </button>
               </form>
 

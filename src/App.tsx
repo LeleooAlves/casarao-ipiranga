@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
-import ChatBot from './components/ChatBot';
 import Home from './pages/Home';
 import Catalog from './pages/Catalog';
 import ApartmentDetails from './pages/ApartmentDetails';
@@ -43,13 +42,12 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/catalog" element={<Catalog />} />
-            <Route path="/apartment/:id" element={<ApartmentDetails />} />
+            <Route path="/catalog/apartment/:id" element={<ApartmentDetails />} />
             <Route path="/reviews" element={<Reviews />} />
           </Routes>
         </main>
         <Footer ref={footerRef} />
         {showFloatingButtons && <WhatsAppButton />}
-        {showFloatingButtons && <ChatBot />}
       </div>
     </Router>
   );

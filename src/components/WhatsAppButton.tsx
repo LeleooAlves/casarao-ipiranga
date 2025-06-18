@@ -3,7 +3,7 @@ import { MessageCircle } from 'lucide-react';
 
 interface WhatsAppButtonProps {
   apartmentTitle?: string;
-  apartmentType?: 'fixed' | 'temporary';
+  apartmentType?: 'fixed' | 'temporary' | 'both';
   customerName?: string;
 }
 
@@ -17,7 +17,7 @@ const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
     let message = 'Olá! Gostaria de saber mais sobre os apartamentos do Casarão Ipiranga.';
     
     if (apartmentTitle && customerName) {
-      const typeText = apartmentType === 'fixed' ? 'moradia fixa' : 'temporada';
+      const typeText = apartmentType === 'fixed' ? 'moradia fixa' : apartmentType === 'temporary' ? 'temporada' : 'ambos';
       message = `Olá! Meu nome é ${customerName} e gostaria de mais informações sobre o apartamento "${apartmentTitle}" para ${typeText}.`;
     }
     

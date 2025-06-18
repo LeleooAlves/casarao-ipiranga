@@ -34,7 +34,7 @@ const Catalog: React.FC = () => {
       style={{
         backgroundImage: 'url(/background/Catalogo.png)',
         backgroundAttachment: 'fixed',
-        backgroundSize: 'cover',
+        backgroundSize: 'auto 100%',
         backgroundPosition: 'center',
       }}
     >

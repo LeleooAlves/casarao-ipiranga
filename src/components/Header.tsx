@@ -17,12 +17,10 @@ const Header: React.FC = () => {
   useEffect(() => {
     const controlNavbar = () => {
       if (typeof window !== 'undefined') {
-        if (window.scrollY > lastScrollY && window.scrollY > 100) {
-          // Scrolling down
-          setIsVisible(false);
-        } else {
-          // Scrolling up
+        if (window.scrollY === 0) {
           setIsVisible(true);
+        } else {
+          setIsVisible(false);
         }
         setLastScrollY(window.scrollY);
       }
@@ -51,12 +49,12 @@ const Header: React.FC = () => {
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center py-6 justify-between md:justify-center">
-          {/* Logo */}
-          <img src="/logo/logo-casarao.png" alt="Casarão Ipiranga" className="h-28 w-auto" />
-
+        {/* Desktop Header */}
+        <div className="hidden md:flex flex-col items-center py-6">
+          {/* Logo (Desktop) */}
+          <img src="/logo/logo-casarao.png" alt="Casarão Ipiranga" className="h-28 w-auto mb-4" />
           {/* Desktop Navigation */}
-          <nav className="hidden md:block relative">
+          <nav className="relative">
             <div className="bg-white/90 backdrop-blur-md rounded-full shadow-lg px-8 py-3 relative">
               {/* Sliding indicator */}
               <div 
@@ -88,17 +86,22 @@ const Header: React.FC = () => {
               </div>
             </div>
           </nav>
+        </div>
 
-          {/* Mobile menu button */}
+        {/* Mobile Header */}
+        <div className="md:hidden flex items-center justify-between py-6">
+          {/* Logo (Mobile) */}
+          <img src="/logo/logo-casarao.png" alt="Casarão Ipiranga" className="h-28 w-auto" />
+          {/* Mobile menu button (Hamburger) */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden bg-white/90 backdrop-blur-md rounded-full p-3 shadow-lg text-primary hover:bg-white transition-colors duration-200"
+            className="bg-white/90 backdrop-blur-md rounded-full p-3 shadow-lg text-primary hover:bg-white transition-colors duration-200 ml-auto"
           >
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Dropdown */}
         {isMenuOpen && (
           <div className="md:hidden pb-4">
             <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg mx-4 p-4">
