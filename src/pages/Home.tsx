@@ -36,17 +36,22 @@ const Home: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen">
+    <div 
+      className="min-h-screen"
+      style={{
+        backgroundImage: 'url(https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1920&h=1080&fit=crop)',
+        backgroundAttachment: 'fixed',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundColor: '#FFFDFA' // Fundo base caso a imagem não carregue ou para complementar
+      }}
+    >
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center" style={{ background: '#FFFDFA' }}>
-        {/* Imagem de fundo dos móveis */}
+      <section className="relative h-screen flex items-center justify-center">
+        {/* Overlay para cor e opacidade */}
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: 'url(https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1920&h=1080&fit=crop)',
-            opacity: 0.35,
-            zIndex: 1
-          }}
+          className="absolute inset-0"
+          style={{ backgroundColor: '#e6e5df', opacity: 0.65 }}
         />
         <div className="relative z-10 text-center text-gray-900 max-w-4xl mx-auto px-4 pt-32">
           <h1 className="text-4xl md:text-5xl font-bold mb-10 leading-tight text-gray-900">
@@ -63,7 +68,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* About Section */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-white bg-opacity-85">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -100,7 +105,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-gray-50 bg-opacity-85">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">

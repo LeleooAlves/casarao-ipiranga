@@ -4,9 +4,10 @@ import { Review } from '../types';
 
 interface ReviewCardProps {
   review: Review;
+  apartmentTitle?: string;
 }
 
-const ReviewCard: React.FC<ReviewCardProps> = ({ review }) => {
+const ReviewCard: React.FC<ReviewCardProps> = ({ review, apartmentTitle }) => {
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }).map((_, index) => (
       <Star
@@ -43,7 +44,10 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review }) => {
             <span className="ml-2 text-sm text-gray-600">({review.rating}/5)</span>
           </div>
           
-          <p className="text-gray-700 leading-relaxed">{review.comment}</p>
+          <p className="text-gray-700 leading-relaxed mb-2">{review.comment}</p>
+          {apartmentTitle && (
+            <p className="text-sm text-gray-500">Apartamento: {apartmentTitle}</p>
+          )}
         </div>
       </div>
     </div>

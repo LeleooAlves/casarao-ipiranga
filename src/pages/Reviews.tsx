@@ -27,8 +27,19 @@ const Reviews: React.FC = () => {
   }));
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 pt-32">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div 
+      className="min-h-screen py-8 pt-64 relative"
+      style={{
+        backgroundImage: 'url(/background/Avaliações.png)',
+        backgroundAttachment: 'fixed',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      {/* Overlay Div */}
+      <div className="absolute inset-0 bg-[#e6e5df] opacity-85 z-0"></div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -170,12 +181,7 @@ const Reviews: React.FC = () => {
               <div className="space-y-6">
                 {filteredReviews.map((review) => (
                   <div key={review.id}>
-                    <ReviewCard review={review} />
-                    <div className="mt-2 ml-16">
-                      <p className="text-sm text-gray-500">
-                        Apartamento: {apartments.find(apt => apt.id === review.apartmentId)?.title}
-                      </p>
-                    </div>
+                    <ReviewCard review={review} apartmentTitle={apartments.find(apt => apt.id === review.apartmentId)?.title} />
                   </div>
                 ))}
               </div>

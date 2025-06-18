@@ -51,7 +51,7 @@ const Header: React.FC = () => {
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col items-center py-6">
+        <div className="flex items-center py-6 justify-between md:justify-center">
           {/* Logo */}
           <img src="/logo/logo-casarao.png" alt="Casarão Ipiranga" className="h-28 w-auto" />
 
