@@ -69,9 +69,9 @@ const Home: React.FC = () => {
     <div 
       className="min-h-screen"
       style={{
-        backgroundImage: 'url(https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1920&h=1080&fit=crop)',
+        backgroundImage: 'url(/background/Home.jpeg)',
         backgroundAttachment: 'fixed',
-        backgroundSize: 'auto 100%',
+        backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundColor: '#FFFDFA' // Fundo base caso a imagem não carregue ou para complementar
       }}

@@ -17,12 +17,18 @@ const Header: React.FC = () => {
   useEffect(() => {
     const controlNavbar = () => {
       if (typeof window !== 'undefined') {
-        if (window.scrollY === 0) {
-          setIsVisible(true);
-        } else {
+        const currentScrollY = window.scrollY;
+        const scrollThreshold = 100; // Pixels para rolar antes de ocultar/mostrar
+
+        if (currentScrollY > lastScrollY && currentScrollY > scrollThreshold) {
+          // Esconder navbar ao rolar para baixo e passar do limite
           setIsVisible(false);
+        } else if (currentScrollY < lastScrollY || currentScrollY <= scrollThreshold) {
+          // Mostrar navbar ao rolar para cima, ou quando estiver perto do topo da página
+          setIsVisible(true);
         }
-        setLastScrollY(window.scrollY);
+
+        setLastScrollY(currentScrollY);
       }
     };
 
@@ -89,7 +95,7 @@ const Header: React.FC = () => {
         </div>
 
         {/* Mobile Header */}
-        <div className="md:hidden flex items-center justify-between py-6">
+        <div className="md:hidden flex items-center justify-between py-6 px-4">
           {/* Logo (Mobile) */}
           <img src="/logo/logo-casarao.png" alt="Casarão Ipiranga" className="h-28 w-auto" />
           {/* Mobile menu button (Hamburger) */}

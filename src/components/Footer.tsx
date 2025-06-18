@@ -7,11 +7,11 @@ const Footer = React.forwardRef<HTMLDivElement>((props, ref) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Logo and Description */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-1">
             <div className="flex items-center space-x-2 mb-4">
               <img src="/logo/logo-rodapé.jpg" alt="Casarão Ipiranga" className="h-14 w-auto" />
             </div>
-            <p className="text-white/80 mb-6">
+            <p className="text-white/80 mb-6 text-sm">
               Oferecemos apartamentos de alta qualidade para moradia fixa e temporada 
               no coração de São Paulo. Conforto, segurança e localização privilegiada.
             </p>
@@ -25,12 +25,22 @@ const Footer = React.forwardRef<HTMLDivElement>((props, ref) => {
                 <Phone className="h-4 w-4" />
                 <span className="text-white/80">(11) 91213-1333</span>
               </div>
+            </div>
+          </div>
+
+          {/* Address Info */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Endereço</h3>
+            <div className="space-y-3">
               <div className="flex items-start space-x-2">
                 <MapPin className="h-4 w-4 mt-1" />
                 <span className="text-white/80">
                   Rua Tabor, 255<br />
                   Ipiranga, São Paulo - SP
                 </span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <MapPin className="h-4 w-4 mt-1" />
                 <span className="text-white/80">
                   Rua do Fico, 70/71<br />
                   Ipiranga, São Paulo - SP
