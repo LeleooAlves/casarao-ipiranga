@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, MapPin, Shield, Star, Users, Wifi, Car, Dumbbell, Briefcase, WashingMachine, ChevronDown } from 'lucide-react';
+import { ArrowRight, MapPin, Shield, Star, Users, Wifi, ShoppingCart, Dumbbell, Briefcase, WashingMachine, ChevronDown } from 'lucide-react';
 import ImageCarousel from '../components/ImageCarousel';
 
 const Home: React.FC = () => {
@@ -24,9 +24,9 @@ const Home: React.FC = () => {
 
   const amenities = [
     
-    { icon: Car, name: 'Estacionamento' },
+    { icon: ShoppingCart, name: 'Mercado PEG&PAG' },
     { icon: Shield, name: 'Segurança' },
-    { icon: Dumbbell, name: 'Academia' },
+    { icon: Dumbbell, name: 'Espaço Fitness' },
     { icon: Briefcase, name: 'Coworking' },
     { icon: WashingMachine, name: 'Lavanderia' },
   ];
@@ -85,7 +85,7 @@ const Home: React.FC = () => {
         />
         <div className="relative z-10 text-center text-gray-900 max-w-4xl mx-auto px-4 pt-32">
           <h1 className="text-4xl md:text-5xl font-bold mb-10 leading-tight text-gray-900">
-            Studios e Kitnets para moradia fixa e temporada no centro de São Paulo
+          Studios, Kitnets e Apartamentos no bairro do Ipiranga - São Paulo
           </h1>
           <Link
             to="/catalog"
@@ -103,13 +103,12 @@ const Home: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                Viva no coração de São Paulo
+                More com conforto e praticidade no coração do Ipiranga!
               </h2>
               <p className="text-lg text-gray-600 mb-8">
-                O Casarão Ipiranga oferece apartamentos completamente mobiliados e equipados, 
-                ideais tanto para quem busca uma moradia fixa quanto para estadias temporárias. 
-                Nossa localização privilegiada no bairro mais importante do país, garantindo fácil acesso a 
-                restaurantes, teatros, museus, transporte público e muito mais.
+              O Condominio Casarão Ipiranga oferece Kitnets, Studios e apartamentos para moradia fixa e temporada (estadias de curto período).
+              Perfeitos para quem busca praticidade, segurança e uma localização privilegiada. 
+              Situado a poucos minutos do Museu do Ipiranga, nosso condominio proporciona fácil acesso a pontos turísticos, parques, transporte público, restaurantes, teatros e toda infraestrutura que São Paulo tem de melhor.
               </p>
               <div className="grid grid-cols-2 gap-4">
                 {amenities.map((amenity, index) => {
