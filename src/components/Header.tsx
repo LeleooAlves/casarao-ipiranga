@@ -44,10 +44,6 @@ const Header: React.FC = () => {
     return location.pathname === path;
   };
 
-  const getActiveIndex = () => {
-    return navigation.findIndex(item => item.href === location.pathname);
-  };
-
   return (
     <header 
       className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ${
@@ -62,15 +58,6 @@ const Header: React.FC = () => {
           {/* Desktop Navigation */}
           <nav className="relative">
             <div className="bg-white/90 backdrop-blur-md rounded-full shadow-lg px-8 py-3 relative">
-              {/* Sliding indicator */}
-              <div 
-                className="absolute top-0 left-0 h-full bg-primary/10 rounded-full transition-all duration-300 ease-in-out"
-                style={{
-                  width: `${100 / navigation.length}%`,
-                  transform: `translateX(${getActiveIndex() * 100}%)`,
-                }}
-              />
-              
               <div className="flex space-x-8 relative z-10">
                 {navigation.map((item) => {
                   const Icon = item.icon;
