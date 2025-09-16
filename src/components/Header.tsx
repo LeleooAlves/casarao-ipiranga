@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Home, Search, Star } from 'lucide-react';
+import { Menu, X, Home, Search } from 'lucide-react';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -11,7 +11,6 @@ const Header: React.FC = () => {
   const navigation = [
     { name: 'Início', href: '/', icon: Home },
     { name: 'Catálogo', href: '/catalog', icon: Search },
-    { name: 'Avaliações', href: '/reviews', icon: Star },
   ];
 
   useEffect(() => {
@@ -48,6 +47,11 @@ const Header: React.FC = () => {
     return navigation.findIndex(item => item.href === location.pathname);
   };
 
+  const shouldShowNavigation = () => {
+    // Ocultar navegação nas páginas de detalhes do apartamento
+    return !location.pathname.startsWith('/catalog/apartment/');
+  };
+
   return (
     <header 
       className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ${
@@ -60,38 +64,40 @@ const Header: React.FC = () => {
           {/* Logo (Desktop) */}
           <img src="/logo/logo-casarao.png" alt="Casarão Ipiranga" className="h-28 w-auto mb-4" />
           {/* Desktop Navigation */}
-          <nav className="relative">
-            <div className="bg-white/90 backdrop-blur-md rounded-full shadow-lg px-8 py-3 relative">
-              {/* Sliding indicator */}
-              <div 
-                className="absolute top-0 left-0 h-full bg-primary/10 rounded-full transition-all duration-300 ease-in-out"
-                style={{
-                  width: `${100 / navigation.length}%`,
-                  transform: `translateX(${getActiveIndex() * 100}%)`,
-                }}
-              />
-              
-              <div className="flex space-x-8 relative z-10">
-                {navigation.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-colors duration-300 ${
-                        isActive(item.href)
-                          ? 'text-primary'
-                          : 'text-gray-600 hover:text-primary'
-                      }`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span>{item.name}</span>
-                    </Link>
-                  );
-                })}
+          {shouldShowNavigation() && (
+            <nav className="relative">
+              <div className="bg-white/90 backdrop-blur-md rounded-full shadow-lg px-8 py-3 relative">
+                {/* Sliding indicator */}
+                <div 
+                  className="absolute top-0 left-0 h-full bg-primary/10 rounded-full transition-all duration-300 ease-in-out"
+                  style={{
+                    width: `${100 / navigation.length}%`,
+                    transform: `translateX(${getActiveIndex() * 100}%)`,
+                  }}
+                />
+                
+                <div className="flex space-x-8 relative z-10">
+                  {navigation.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.name}
+                        to={item.href}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-colors duration-300 ${
+                          isActive(item.href)
+                            ? 'text-primary'
+                            : 'text-gray-600 hover:text-primary'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span>{item.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          </nav>
+            </nav>
+          )}
         </div>
 
         {/* Mobile Header */}
@@ -99,16 +105,18 @@ const Header: React.FC = () => {
           {/* Logo (Mobile) */}
           <img src="/logo/logo-casarao.png" alt="Casarão Ipiranga" className="h-28 w-auto" />
           {/* Mobile menu button (Hamburger) */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="bg-white/90 backdrop-blur-md rounded-full p-3 shadow-lg text-primary hover:bg-white transition-colors duration-200 ml-auto"
-          >
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+          {shouldShowNavigation() && (
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="bg-white/90 backdrop-blur-md rounded-full p-3 shadow-lg text-primary hover:bg-white transition-colors duration-200 ml-auto"
+            >
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          )}
         </div>
 
         {/* Mobile Dropdown */}
-        {isMenuOpen && (
+        {isMenuOpen && shouldShowNavigation() && (
           <div className="md:hidden pb-4">
             <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg mx-4 p-4">
               <nav className="space-y-2">

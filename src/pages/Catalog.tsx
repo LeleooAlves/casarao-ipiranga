@@ -1,24 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Home, Calendar } from 'lucide-react';
+import { Home, Calendar } from 'lucide-react';
 import ApartmentCard from '../components/ApartmentCard';
-import { apartments } from '../data/apartments';
-import { FilterOptions } from '../types';
+import { useApartments } from '../hooks/useApartments';
 
 const Catalog: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const { apartments, isLoading } = useApartments();
   const [selectedCategory, setSelectedCategory] = useState<'fixed' | 'temporary'>('fixed');
+  
   const filteredApartments = useMemo(() => {
     return apartments.filter((apartment) => {
-      // Search term filter
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        const matchesSearch = 
-          apartment.title.toLowerCase().includes(searchLower) ||
-          apartment.description.toLowerCase().includes(searchLower) ||
-          apartment.location.address.toLowerCase().includes(searchLower);
-        if (!matchesSearch) return false;
-      }
-
       // Category filter
       if (apartment.type !== selectedCategory) {
         return false;
@@ -26,7 +16,7 @@ const Catalog: React.FC = () => {
 
       return true;
     });
-  }, [searchTerm, selectedCategory]);
+  }, [apartments, selectedCategory]);
 
   return (
     <div 
@@ -42,15 +32,6 @@ const Catalog: React.FC = () => {
       <div className="absolute inset-0 bg-[#e6e5df] opacity-85 z-0"></div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Catálogo de Apartamentos
-          </h1>
-          <p className="text-lg text-gray-600">
-            Encontre o apartamento perfeito para suas necessidades
-          </p>
-        </div>
 
         {/* Category Tabs */}
         <div className="flex justify-center mb-8">
@@ -93,27 +74,19 @@ const Catalog: React.FC = () => {
           </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="mb-6">
-          <div className="relative max-w-md mx-auto">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-            <input
-              type="text"
-              placeholder="Buscar apartamentos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
-          </div>
-        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
           {/* Filter Panel */}
           
 
           {/* Results */}
-          <div className="lg:col-span-1">
-            {filteredApartments.length > 0 ? (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            {isLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-gray-600">Carregando apartamentos...</p>
+              </div>
+            ) : filteredApartments.length > 0 ? (
               <>
                 <div className="flex items-center mb-6">
                   {selectedCategory === 'fixed' ? (
@@ -136,18 +109,16 @@ const Catalog: React.FC = () => {
               </>
             ) : (
               <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">
-                  Nenhum apartamento encontrado com os filtros selecionados para {selectedCategory === 'fixed' ? 'Moradia Fixa' : 'Temporada'}.
+                <Home className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {apartments.length === 0 ? 'Nenhum apartamento disponível' : 'Nenhum apartamento encontrado'}
+                </h3>
+                <p className="text-gray-500 text-lg mb-4">
+                  {apartments.length === 0 
+                    ? 'Não há apartamentos cadastrados no momento.'
+                    : `Nenhuma moradia ${selectedCategory === 'fixed' ? 'fixa' : 'temporária'} disponível no momento.`
+                  }
                 </p>
-                <button
-                  onClick={() => {
-                    setSearchTerm('');
-                    
-                  }}
-                  className="mt-4 text-primary hover:text-primary/80 font-medium"
-                >
-                  Limpar busca
-                </button>
               </div>
             )}
           </div>

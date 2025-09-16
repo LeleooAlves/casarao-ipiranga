@@ -1,5 +1,6 @@
 export interface Apartment {
   id: string;
+  slug: string;
   title: string;
   description: string;
   price: {
@@ -26,15 +27,6 @@ export interface Apartment {
   }[];
 }
 
-export interface Review {
-  id: string;
-  name: string;
-  rating: number;
-  comment: string;
-  date: string;
-  photo?: string;
-  apartmentId: string;
-}
 
 export interface FAQ {
   id: string;

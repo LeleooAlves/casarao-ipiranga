@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Bed, Bath, Square, Star } from 'lucide-react';
+import { MapPin, Bed, Bath, Square } from 'lucide-react';
 import { Apartment } from '../types';
 
 interface ApartmentCardProps {
@@ -72,18 +72,16 @@ const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment }) => {
             <div className="text-lg font-bold text-primary">
               {formatPrice(apartment.price.monthly)}/mês
             </div>
-            <div className="text-sm text-gray-600">
-              {formatPrice(apartment.price.daily)}/dia
-            </div>
-          </div>
-          <div className="flex items-center">
-            <Star className="h-4 w-4 text-yellow-400 mr-1 fill-current" />
-            <span className="text-sm text-gray-600">4.8</span>
+            {apartment.type !== 'fixed' && (
+              <div className="text-sm text-gray-600">
+                {formatPrice(apartment.price.daily)}/dia
+              </div>
+            )}
           </div>
         </div>
         
         <Link
-          to={`/catalog/apartment/${apartment.id}`}
+          to={`/catalog/apartment/${apartment.slug}`}
           className="block w-full bg-primary text-white text-center py-2 rounded-md hover:bg-primary/90 transition-colors duration-200 font-medium"
         >
           Ver Detalhes

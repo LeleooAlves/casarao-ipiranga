@@ -6,22 +6,23 @@ import {
   Bath, 
   Square, 
   MapPin, 
-  Wifi, 
-  Car, 
-  Shield, 
-  Star,
-  Calendar,
   Phone,
-  Mail
+  Mail,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Play
 } from 'lucide-react';
-import { apartments } from '../data/apartments';
-import { reviews } from '../data/reviews';
+import { useApartments } from '../hooks/useApartments';
 import WhatsAppButton from '../components/WhatsAppButton';
 
 const ApartmentDetails: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
+  const { getApartmentBySlug } = useApartments();
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedTab, setSelectedTab] = useState('overview');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalImageIndex, setModalImageIndex] = useState(0);
   const [formData, setFormData] = useState({
     name: '',
     checkIn: '',
@@ -29,8 +30,7 @@ const ApartmentDetails: React.FC = () => {
     type: 'temporary' as 'fixed' | 'temporary' | 'both'
   });
 
-  const apartment = apartments.find(apt => apt.id === id);
-  const apartmentReviews = reviews.filter(review => review.apartmentId === id);
+  const apartment = getApartmentBySlug(slug || '');
 
   useEffect(() => {
     if (apartment) {
@@ -43,8 +43,8 @@ const ApartmentDetails: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center pt-32">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Apartamento não encontrado</h2>
-          <Link to="/catalog" className="text-primary hover:text-primary/80">
-            Voltar ao catálogo
+          <Link to="/catalog" className="text-primary hover:text-primary/80 border border-primary rounded-md px-3 py-2 hover:bg-primary/5 transition-colors duration-200 inline-block cursor-pointer select-none" style={{ minHeight: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span className="pointer-events-none">Voltar ao catálogo</span>
           </Link>
         </div>
       </div>
@@ -104,43 +104,125 @@ const ApartmentDetails: React.FC = () => {
   const tabs = [
     { id: 'overview', label: 'Visão Geral' },
     { id: 'amenities', label: 'Comodidades' },
-    { id: 'location', label: 'Localização' },
-    { id: 'reviews', label: 'Avaliações' }
+    { id: 'location', label: 'Localização' }
   ];
 
+  // Combina imagens e vídeo para o carrossel
+  const mediaItems = [
+    ...apartment.images.map((img, index) => ({ type: 'image', src: img, index })),
+    ...(apartment.video ? [{ type: 'video', src: apartment.video, index: apartment.images.length }] : [])
+  ];
+
+  const openModal = (index: number) => {
+    setModalImageIndex(index);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const nextMedia = () => {
+    setModalImageIndex((prev) => (prev + 1) % mediaItems.length);
+  };
+
+  const prevMedia = () => {
+    setModalImageIndex((prev) => (prev - 1 + mediaItems.length) % mediaItems.length);
+  };
+
+  const nextCarousel = () => {
+    setSelectedImage((prev) => (prev + 1) % mediaItems.length);
+  };
+
+  const prevCarousel = () => {
+    setSelectedImage((prev) => (prev - 1 + mediaItems.length) % mediaItems.length);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 pt-64">
+    <div className="min-h-screen bg-gray-50 pt-32">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <Link 
           to="/catalog" 
-          className="inline-flex items-center text-primary hover:text-primary/80 mb-6"
+          className="inline-flex items-center text-primary hover:text-primary/80 mb-6 border border-primary rounded-md px-3 py-2 hover:bg-primary/5 transition-colors duration-200 cursor-pointer select-none"
+          style={{ minHeight: '40px', display: 'flex', alignItems: 'center' }}
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar ao catálogo
+          <ArrowLeft className="h-4 w-4 mr-2 pointer-events-none" />
+          <span className="pointer-events-none">Voltar ao catálogo</span>
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            {/* Image Gallery */}
+            {/* Image Gallery with Carousel */}
             <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-              <div className="relative">
-                <img
-                  src={apartment.images[selectedImage]}
-                  alt={apartment.title}
-                  className="w-full h-96 object-cover"
-                />
-                {apartment.video && selectedImage === apartment.images.length && (
-                  <video
-                    controls
-                    className="w-full h-96 object-cover"
-                    poster={apartment.images[0]}
-                  >
-                    <source src={apartment.video} type="video/mp4" />
-                  </video>
+              <div className="relative h-96 group">
+                {/* Main Media Display */}
+                <div 
+                  className="w-full h-full cursor-pointer"
+                  onClick={() => openModal(selectedImage)}
+                >
+                  {mediaItems[selectedImage]?.type === 'video' ? (
+                    <video
+                      controls
+                      className="w-full h-full object-cover"
+                      poster={apartment.images[0]}
+                    >
+                      <source src={mediaItems[selectedImage].src} type="video/mp4" />
+                    </video>
+                  ) : (
+                    <img
+                      src={mediaItems[selectedImage]?.src}
+                      alt={apartment.title}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </div>
+
+                {/* Navigation Arrows */}
+                {mediaItems.length > 1 && (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        prevCarousel();
+                      }}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <ChevronLeft className="h-6 w-6" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        nextCarousel();
+                      }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <ChevronRight className="h-6 w-6" />
+                    </button>
+                  </>
+                )}
+
+                {/* Indicators */}
+                {mediaItems.length > 1 && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+                    {mediaItems.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedImage(index);
+                        }}
+                        className={`w-3 h-3 rounded-full transition-colors ${
+                          selectedImage === index ? 'bg-white' : 'bg-white/50'
+                        }`}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
+
+              {/* Thumbnail Strip */}
               <div className="p-4">
                 <div className="flex space-x-2 overflow-x-auto">
                   {apartment.images.map((image, index) => (
@@ -165,7 +247,7 @@ const ApartmentDetails: React.FC = () => {
                         selectedImage === apartment.images.length ? 'border-primary' : 'border-gray-200'
                       }`}
                     >
-                      <span className="text-white text-xs">Video</span>
+                      <Play className="h-6 w-6 text-white" />
                     </button>
                   )}
                 </div>
@@ -186,9 +268,11 @@ const ApartmentDetails: React.FC = () => {
                   <div className="text-2xl font-bold text-primary">
                     {formatPrice(apartment.price.monthly)}/mês
                   </div>
-                  <div className="text-gray-600">
-                    {formatPrice(apartment.price.daily)}/dia
-                  </div>
+                  {apartment.type !== 'fixed' && (
+                    <div className="text-gray-600">
+                      {formatPrice(apartment.price.daily)}/dia
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -266,39 +350,6 @@ const ApartmentDetails: React.FC = () => {
                   </div>
                 )}
 
-                {selectedTab === 'reviews' && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3">
-                      Avaliações ({apartmentReviews.length})
-                    </h3>
-                    {apartmentReviews.length > 0 ? (
-                      <div className="space-y-4">
-                        {apartmentReviews.map((review) => (
-                          <div key={review.id} className="border-b border-gray-200 pb-4 last:border-b-0">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium text-gray-900">{review.name}</span>
-                              <div className="flex items-center">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`h-4 w-4 ${
-                                      i < review.rating
-                                        ? 'text-yellow-400 fill-current'
-                                        : 'text-gray-300'
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                            <p className="text-gray-700">{review.comment}</p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-gray-500">Ainda não há avaliações para este apartamento.</p>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -384,6 +435,81 @@ const ApartmentDetails: React.FC = () => {
         apartmentType={formData.type}
         customerName={formData.name}
       />
+
+      {/* Modal de Visualização em Tela Cheia */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
+          <div className="relative w-full h-full flex items-center justify-center">
+            {/* Botão Fechar */}
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+            >
+              <X className="h-8 w-8" />
+            </button>
+
+            {/* Navegação Anterior */}
+            {mediaItems.length > 1 && (
+              <button
+                onClick={prevMedia}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 z-10"
+              >
+                <ChevronLeft className="h-12 w-12" />
+              </button>
+            )}
+
+            {/* Conteúdo do Modal */}
+            <div className="max-w-7xl max-h-full flex items-center justify-center p-4">
+              {mediaItems[modalImageIndex]?.type === 'video' ? (
+                <video
+                  controls
+                  autoPlay
+                  className="max-w-full max-h-full object-contain"
+                  poster={apartment.images[0]}
+                >
+                  <source src={mediaItems[modalImageIndex].src} type="video/mp4" />
+                </video>
+              ) : (
+                <img
+                  src={mediaItems[modalImageIndex]?.src}
+                  alt={apartment.title}
+                  className="max-w-full max-h-full object-contain"
+                />
+              )}
+            </div>
+
+            {/* Navegação Próxima */}
+            {mediaItems.length > 1 && (
+              <button
+                onClick={nextMedia}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 z-10"
+              >
+                <ChevronRight className="h-12 w-12" />
+              </button>
+            )}
+
+            {/* Indicadores do Modal */}
+            {mediaItems.length > 1 && (
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex space-x-3">
+                {mediaItems.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setModalImageIndex(index)}
+                    className={`w-4 h-4 rounded-full transition-colors ${
+                      modalImageIndex === index ? 'bg-white' : 'bg-white/50'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Contador */}
+            <div className="absolute bottom-4 right-4 text-white text-sm bg-black/50 px-3 py-1 rounded">
+              {modalImageIndex + 1} / {mediaItems.length}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
