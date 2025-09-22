@@ -21,9 +21,18 @@ const CasaraoMuseuImages: CarouselImage[] = [
   { src: '/casarao-museu/Vista área.jpg', description: 'Vista da administração' },
 ];
 
+const CasaraoFicoImages: CarouselImage[] = [
+  { src: '/casarao fico/Fachada.jpg', description: 'Fachada' },
+  { src: '/casarao fico/Recepção.jpg', description: 'Recepção' },
+  { src: '/casarao-museu/academia 1.jpg', description: 'Academia' },
+  { src: '/casarao-museu/academia 2.jpg', description: 'Academia' },
+  { src: '/casarao-museu/Admin.jpg', description: 'Administração' },
+  { src: '/casarao-museu/bicicletário.jpg', description: 'Bicicletário' },
+];
+
 const ImageCarousel: React.FC<ImageCarouselProps> = ({ condominium }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const images = condominium === 'museu' ? CasaraoMuseuImages : [];
+  const images = condominium === 'museu' ? CasaraoMuseuImages : CasaraoFicoImages;
 
   const goToNext = () => {
     setCurrentImageIndex((prevIndex) =>

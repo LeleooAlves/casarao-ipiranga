@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Apartment } from '../types';
 import { supabase } from '../lib/supabase';
+import type { Database } from '../lib/supabase';
 
 const APARTMENTS_STORAGE_KEY = 'casarao_apartments';
 
@@ -30,7 +31,7 @@ export const useApartments = () => {
         }
       } else {
         // Converte dados do Supabase para formato da interface
-        const formattedApartments: Apartment[] = supabaseApartments.map(apt => ({
+        const formattedApartments: Apartment[] = supabaseApartments.map((apt: Database['public']['Tables']['apartments']['Row']) => ({
           id: apt.id,
           slug: apt.slug,
           title: apt.title,
