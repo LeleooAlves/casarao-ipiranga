@@ -10,29 +10,23 @@ interface CarouselImage {
   description: string;
 }
 
-const CasaraoMuseuImages: CarouselImage[] = [
-  { src: '/casarao-museu/academia 1.jpg', description: 'Academia' },
-  { src: '/casarao-museu/academia 2.jpg', description: 'Academia' },
-  { src: '/casarao-museu/área.jpg', description: 'Área de Lazer' },
-  { src: '/casarao-museu/fachada.jpg', description: 'Fachada' },
-  { src: '/casarao-museu/Admin.jpg', description: 'Administração' },
-  { src: '/casarao-museu/bicicletário.jpg', description: 'Bicicletário' },
-  { src: '/casarao-museu/Coworking.jpg', description: 'Coworking' },
-  { src: '/casarao-museu/Vista área.jpg', description: 'Vista da administração' },
-];
-
-const CasaraoFicoImages: CarouselImage[] = [
-  { src: '/casarao fico/Fachada.jpg', description: 'Fachada' },
-  { src: '/casarao fico/Recepção.jpg', description: 'Recepção' },
-  { src: '/casarao-museu/academia 1.jpg', description: 'Academia' },
-  { src: '/casarao-museu/academia 2.jpg', description: 'Academia' },
-  { src: '/casarao-museu/Admin.jpg', description: 'Administração' },
-  { src: '/casarao-museu/bicicletário.jpg', description: 'Bicicletário' },
+const AllImages: CarouselImage[] = [
+  { src: '/imagens/fachadamuseu.jpg', description: 'Fachada - Localizado em Casarão Museu' },
+  { src: '/imagens/Fachadafico.jpg', description: 'Fachada - Localizado em Casarão Fico' },
+  { src: '/imagens/recepcaofico.jpg', description: 'Recepção - Localizado em Casarão Fico' },
+  { src: '/imagens/academia 1.jpg', description: 'Academia - Acesso de ambos condomínios' },
+  { src: '/imagens/academia 2.jpg', description: 'Academia - Acesso de ambos condomínios' },
+  { src: '/imagens/area.jpg', description: 'Área de Lazer - Acesso de ambos condomínios' },
+  { src: '/imagens/Admin.jpg', description: 'Administração - Acesso de ambos condomínios' },
+  { src: '/imagens/bicicletario.jpg', description: 'Bicicletário - Acesso de ambos condomínios' },
+  { src: '/imagens/Coworking.jpg', description: 'Coworking - Acesso de ambos condomínios' },
+  { src: '/imagens/vista-area.jpg', description: 'Vista da Administração - Acesso de ambos condomínios' },
+  { src: '/imagens/pegpag.png', description: 'Mercado PEG&PAG - Acesso de ambos condomínios' },
 ];
 
 const ImageCarousel: React.FC<ImageCarouselProps> = ({ condominium }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const images = condominium === 'museu' ? CasaraoMuseuImages : CasaraoFicoImages;
+  const images = AllImages;
 
   const goToNext = () => {
     setCurrentImageIndex((prevIndex) =>
@@ -50,9 +44,9 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({ condominium }) => {
     setCurrentImageIndex(0); // Reset index when condominium changes
   }, [condominium]);
 
-  if (images.length === 0) {
+  if (!images || images.length === 0) {
     return (
-      <div className="flex items-center justify-center bg-gray-100 rounded-lg shadow-xl" style={{ height: '500px' }}>
+      <div className="w-full h-[500px] flex items-center justify-center bg-gray-200 rounded-lg">
         <p className="text-gray-500">Nenhuma imagem disponível para este condomínio.</p>
       </div>
     );
@@ -62,8 +56,15 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({ condominium }) => {
     <div className="relative w-full h-[500px] rounded-lg shadow-xl overflow-hidden">
       <img
         src={images[currentImageIndex].src}
-        alt={`Condomínio ${condominium === 'museu' ? 'Museu' : 'Fico'} - ${images[currentImageIndex].description}`}
-        className="w-full h-full object-cover"
+        alt={`Condomínio Casarão Ipiranga - ${images[currentImageIndex].description}`}
+        className={`w-full h-full ${
+          images[currentImageIndex].description.includes('Mercado PEG&PAG') 
+            ? 'object-contain' 
+            : 'object-cover'
+        }`}
+        onError={() => {
+          console.error('Erro ao carregar imagem:', images[currentImageIndex].src);
+        }}
       />
       <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-4 text-center text-lg font-medium">
         {images[currentImageIndex].description}
@@ -81,7 +82,7 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({ condominium }) => {
         <ChevronRight className="h-6 w-6" />
       </button>
       <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-2">
-        {images.map((_, index) => (
+        {images.map((_: CarouselImage, index: number) => (
           <button
             key={index}
             onClick={() => setCurrentImageIndex(index)}
@@ -95,4 +96,4 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({ condominium }) => {
   );
 };
 
-export default ImageCarousel; 
+export default ImageCarousel;

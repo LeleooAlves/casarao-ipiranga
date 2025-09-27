@@ -1,7 +1,7 @@
-import React, { ForwardedRef } from 'react';
-import { Home, Phone, Mail, MapPin, Facebook, Instagram } from 'lucide-react';
+import React from 'react';
+import { Phone, MapPin, Facebook, Instagram } from 'lucide-react';
 
-const Footer = React.forwardRef<HTMLDivElement>((props, ref) => {
+const Footer = React.forwardRef<HTMLDivElement>((_, ref) => {
   return (
     <footer ref={ref} className="bg-primary text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -9,7 +9,7 @@ const Footer = React.forwardRef<HTMLDivElement>((props, ref) => {
           {/* Logo and Description */}
           <div className="lg:col-span-1">
             <div className="flex items-center space-x-2 mb-4">
-              <img src="/logo/logo-rodapé.jpg" alt="Casarão Ipiranga" className="h-14 w-auto" />
+              <img src="/logo/logo-rodape.jpg" alt="Casarão Ipiranga" className="h-14 w-auto" />
             </div>
             <p className="text-white/80 mb-6 text-sm">
               Oferecemos apartamentos de alta qualidade para moradia fixa e temporada 

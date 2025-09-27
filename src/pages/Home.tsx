@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowRight, MapPin, Shield, Star, Users, Wifi, ShoppingCart, Dumbbell, Briefcase, WashingMachine, ChevronDown } from 'lucide-react';
+import { MapPin, Shield, Star, Users, ShoppingCart, Dumbbell, Briefcase, WashingMachine, ChevronDown } from 'lucide-react';
 import ImageCarousel from '../components/ImageCarousel';
+import ScrollToTopButton from '../components/ScrollToTopButton';
 
 const Home: React.FC = () => {
   const features = [
@@ -23,7 +23,6 @@ const Home: React.FC = () => {
   ];
 
   const amenities = [
-    
     { icon: ShoppingCart, name: 'Mercado PEG&PAG' },
     { icon: Shield, name: 'Segurança' },
     { icon: Dumbbell, name: 'Espaço Fitness' },
@@ -38,11 +37,7 @@ const Home: React.FC = () => {
     },
     {
       question: 'Quais documentos preciso para alugar um apartamento para moradia fixa?',
-      answer: 'Geralmente são solicitados RG, CPF, comprovante de renda (holerite ou declaração de IR), comprovante de residência e, em alguns casos, referências. Para autônomos ou profissionais liberais, podem ser solicitados extratos bancários e declaração de imposto de renda.'
-    },
-    {
-      question: 'O que está incluso no valor do aluguel de temporada?',
-      answer: 'Para aluguéis de temporada, o valor geralmente inclui todas as despesas como condomínio, IPTU, água, luz, gás e internet. Em alguns casos, serviços de limpeza e roupa de cama/banho também podem estar inclusos. Verifique sempre os detalhes na descrição do apartamento.'
+      answer: 'São solicitados RG, CPF, comprovante de renda (holerite ou declaração de IR), comprovante de residência. Para autônomos ou profissionais liberais, podem ser solicitados extratos bancários e declaração de imposto de renda.'
     },
     {
       question: 'Como funciona o pagamento do aluguel?',
@@ -50,7 +45,7 @@ const Home: React.FC = () => {
     },
     {
       question: 'Os apartamentos são mobiliados?',
-      answer: 'Sim, todos os nossos apartamentos são completamente mobiliados e equipados com tudo o que você precisa, desde eletrodomésticos até utensílios de cozinha e roupas de cama. Isso proporciona conforto e praticidade desde o primeiro dia.'
+      answer: 'Não, os apartamentos para moradia fixa não são mobiliados. Os apartamentos de temporada sim, todos mobiliados.'
     },
     {
       question: 'Posso visitar os apartamentos antes de alugar?',
@@ -58,11 +53,17 @@ const Home: React.FC = () => {
     }
   ];
 
-  const [selectedCondominium, setSelectedCondominium] = useState<'museu' | 'fico'>('museu');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
   const toggleFaq = (index: number) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
+  };
+
+  const scrollToContent = () => {
+    window.scrollTo({
+      top: window.innerHeight,
+      behavior: 'smooth'
+    });
   };
 
   return (
@@ -73,7 +74,7 @@ const Home: React.FC = () => {
         backgroundAttachment: 'fixed',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        backgroundColor: '#FFFDFA' // Fundo base caso a imagem não carregue ou para complementar
+        backgroundColor: '#FFFDFA'
       }}
     >
       {/* Hero Section */}
@@ -83,17 +84,17 @@ const Home: React.FC = () => {
           className="absolute inset-0"
           style={{ backgroundColor: '#e6e5df', opacity: 0.65 }}
         />
-        <div className="relative z-10 text-center text-gray-900 max-w-4xl mx-auto px-4 pt-32">
-          <h1 className="text-4xl md:text-5xl font-bold mb-10 leading-tight text-gray-900">
-          Studios, Kitnets e Apartamentos no bairro do Ipiranga - São Paulo
+        <div className="relative z-10 text-center text-gray-900 max-w-6xl mx-auto px-4 pt-32 overflow-x-auto">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-10 leading-tight text-gray-900 whitespace-nowrap">
+          Studios e Kitnets no bairro do Ipiranga - São Paulo
           </h1>
-          <Link
-            to="/catalog"
-            className="inline-flex items-center bg-[#074024] hover:bg-[#176c3a] text-[#FFFDFA] px-8 py-4 rounded-lg text-lg font-semibold transition-colors duration-300 shadow-lg hover:shadow-xl"
+          <button
+            onClick={scrollToContent}
+            className="inline-flex flex-col items-center bg-[#074024] hover:bg-[#176c3a] text-[#FFFDFA] px-8 py-4 rounded-lg text-lg font-semibold transition-colors duration-300 shadow-lg hover:shadow-xl"
           >
-            Explorar Apartamentos
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Link>
+            <span className="mb-2">Conheça mais sobre o condomínio</span>
+            <ChevronDown className="h-6 w-6 animate-bounce" />
+          </button>
         </div>
       </section>
 
@@ -106,7 +107,7 @@ const Home: React.FC = () => {
                 More com conforto e praticidade no coração do Ipiranga!
               </h2>
               <p className="text-lg text-gray-600 mb-8">
-              O Condominio Casarão Ipiranga oferece Kitnets, Studios e apartamentos para moradia fixa e temporada (estadias de curto período).
+              O Condominio Casarão Ipiranga oferece Kitnets e Studios para moradia fixa e temporada (estadias de período mais encurtado).
               Perfeitos para quem busca praticidade, segurança e uma localização privilegiada. 
               Situado a poucos minutos do Museu do Ipiranga, nosso condominio proporciona fácil acesso a pontos turísticos, parques, transporte público, restaurantes, teatros e toda infraestrutura que São Paulo tem de melhor.
               </p>
@@ -123,23 +124,15 @@ const Home: React.FC = () => {
               </div>
             </div>
             <div>
-              <div className="flex space-x-4 mb-6">
-                <button 
-                  onClick={() => setSelectedCondominium('museu')}
-                  className={`px-6 py-2 rounded-lg text-lg font-semibold transition-colors duration-300 
-                    ${selectedCondominium === 'museu' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                >
-                  Casarão Museu
-                </button>
-                <button 
-                  onClick={() => setSelectedCondominium('fico')}
-                  className={`px-6 py-2 rounded-lg text-lg font-semibold transition-colors duration-300 
-                    ${selectedCondominium === 'fico' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                >
-                  Casarão Fico
-                </button>
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Condomínio Casarão Ipiranga
+                </h3>
+                <p className="text-gray-600 mt-2">
+                  Conheça nossas instalações e áreas comuns
+                </p>
               </div>
-              <ImageCarousel condominium={selectedCondominium} />
+              <ImageCarousel condominium="museu" />
             </div>
           </div>
         </div>
@@ -154,16 +147,15 @@ const Home: React.FC = () => {
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Oferecemos muito mais que apenas um lugar para ficar. 
-              Proporcionamos uma experiência completa de moradia.
+              Descubra os diferenciais que fazem do nosso condomínio a escolha ideal.
             </p>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <div key={index} className="text-center">
-                  <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div key={index} className="text-center p-6 bg-white rounded-lg shadow-md">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
                     <Icon className="h-8 w-8 text-primary" />
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -181,23 +173,23 @@ const Home: React.FC = () => {
 
       {/* FAQ Section */}
       <section className="py-16 bg-white bg-opacity-85">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Perguntas Frequentes
             </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Encontre respostas para as dúvidas mais comuns sobre nossos apartamentos.
+            <p className="text-lg text-gray-600">
+              Tire suas dúvidas sobre nossos apartamentos e serviços
             </p>
           </div>
-          <div className="space-y-6 bg-white bg-opacity-70 rounded-lg p-6">
+          <div className="space-y-4">
             {faqs.map((faq, index) => (
-              <div key={index} className="border-b border-gray-200 pb-4 last:border-b-0">
-                <button 
-                  className="flex justify-between items-center w-full text-left focus:outline-none py-2"
+              <div key={index} className="bg-white rounded-lg shadow-md p-6">
+                <button
                   onClick={() => toggleFaq(index)}
+                  className="w-full flex justify-between items-center text-left"
                 >
-                  <h3 className="text-xl font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-gray-900 pr-4">
                     {faq.question}
                   </h3>
                   <ChevronDown 
@@ -214,6 +206,7 @@ const Home: React.FC = () => {
           </div>
         </div>
       </section>
+      <ScrollToTopButton />
     </div>
   );
 };

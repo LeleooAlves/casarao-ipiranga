@@ -19,12 +19,12 @@ const Header: React.FC = () => {
         const currentScrollY = window.scrollY;
         const scrollThreshold = 100; // Pixels para rolar antes de ocultar/mostrar
 
-        if (currentScrollY > lastScrollY && currentScrollY > scrollThreshold) {
-          // Esconder navbar ao rolar para baixo e passar do limite
-          setIsVisible(false);
-        } else if (currentScrollY < lastScrollY || currentScrollY <= scrollThreshold) {
-          // Mostrar navbar ao rolar para cima, ou quando estiver perto do topo da página
+        if (currentScrollY <= scrollThreshold) {
+          // Mostrar navbar apenas quando estiver no topo da página
           setIsVisible(true);
+        } else {
+          // Esconder navbar quando rolar para baixo
+          setIsVisible(false);
         }
 
         setLastScrollY(currentScrollY);
