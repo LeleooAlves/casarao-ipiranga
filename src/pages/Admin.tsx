@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
 import { useApartments } from '../hooks/useApartments';
+import { useApartmentStats } from '../hooks/useApartmentStats';
+import { useUserInterests } from '../hooks/useUserInterests';
 import { useFileUpload } from '../hooks/useFileUpload';
-import { Plus, Trash2, X, Home, Calendar, Upload, Save } from 'lucide-react';
-import AdminHeader from '../components/AdminHeader';
-import MigrationButton from '../components/MigrationButton';
+import { Plus, Trash2, X, Home, Calendar, Edit, ToggleLeft, ToggleRight, BarChart3, List, Menu, MessageCircle, Eye, Star, LogOut } from 'lucide-react';
 
 const Admin: React.FC = () => {
-  const { apartments, addApartment, deleteApartment, clearAllApartments, isLoading } = useApartments();
-  const { uploadProgress, convertAndUploadImages, convertAndUploadVideo } = useFileUpload();
-  const [activeTab, setActiveTab] = useState<'add' | 'list'>('list');
+  const { apartments, addApartment, updateApartment, deleteApartment, clearAllApartments, isLoading } = useApartments();
+  const { stats } = useApartmentStats();
+  const { getInterestsCount, getApartmentsWithInterests } = useUserInterests();
+  const { uploadImages, uploadVideo } = useFileUpload();
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'list' | 'edit'>('dashboard');
+  const [apartmentSubTab, setApartmentSubTab] = useState<'fixed' | 'temporary' | 'experience'>('fixed');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [editingApartment, setEditingApartment] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -20,271 +25,49 @@ const Admin: React.FC = () => {
     message: '',
     onConfirm: () => {}
   });
-  const [newApartment, setNewApartment] = useState({
+  
+  const [interestModal, setInterestModal] = useState<{
+    isOpen: boolean;
+    apartmentTitle: string;
+    interests: any[];
+  }>({
+    isOpen: false,
+    apartmentTitle: '',
+    interests: []
+  });
+
+  const [addApartmentModal, setAddApartmentModal] = useState(false);
+  
+  // Estados para o formulário de adicionar apartamento
+  const [apartmentForm, setApartmentForm] = useState({
     title: '',
+    type: 'fixed' as 'fixed' | 'temporary' | 'both' | 'experience',
     description: '',
-    type: 'temporary' as 'fixed' | 'temporary' | 'both',
-    price: {
-      monthly: '',
-      daily: ''
-    },
     size: '',
     bedrooms: '',
     bathrooms: '',
+    condominium: '' as 'casarao-museu' | 'casarao-fico' | '',
     amenities: [] as string[],
-    location: {
-      address: 'casarao-museu' as 'casarao-museu' | 'casarao-fico',
-      lat: 0,
-      lng: 0
-    },
-    nearbyAttractions: [] as Array<{name: string, distance: string, type: string}>,
-    images: [] as File[],
-    video: null as File | null
+    nearbyAttractions: ''
   });
+  
+  const [apartmentImages, setApartmentImages] = useState<File[]>([]);
+  const [apartmentVideo, setApartmentVideo] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [amenityInput, setAmenityInput] = useState('');
-  const [attractionInput, setAttractionInput] = useState({
-    name: '',
-    distance: '',
-    type: ''
-  });
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setNewApartment(prev => ({
-        ...prev,
-        [parent]: {
-          ...(prev[parent as keyof typeof prev] as object),
-          [child]: value
-        }
-      }));
-    } else {
-      setNewApartment(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setNewApartment(prev => ({
-        ...prev,
-        images: [...prev.images, ...files]
-      }));
-    }
-  };
-
-  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setNewApartment(prev => ({
-        ...prev,
-        video: e.target.files![0]
-      }));
-    }
-  };
-
-  const removeImage = (index: number) => {
-    setNewApartment(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index)
-    }));
-  };
-
-  const addAmenity = () => {
-    if (amenityInput.trim()) {
-      setNewApartment(prev => ({
-        ...prev,
-        amenities: [...prev.amenities, amenityInput.trim()]
-      }));
-      setAmenityInput('');
-    }
-  };
-
-  const removeAmenity = (index: number) => {
-    setNewApartment(prev => ({
-      ...prev,
-      amenities: prev.amenities.filter((_, i) => i !== index)
-    }));
-  };
-
-  const addAttraction = () => {
-    if (attractionInput.name && attractionInput.distance && attractionInput.type) {
-      setNewApartment(prev => ({
-        ...prev,
-        nearbyAttractions: [...prev.nearbyAttractions, attractionInput]
-      }));
-      setAttractionInput({ name: '', distance: '', type: '' });
-    }
-  };
-
-  const removeAttraction = (index: number) => {
-    setNewApartment(prev => ({
-      ...prev,
-      nearbyAttractions: prev.nearbyAttractions.filter((_, i) => i !== index)
-    }));
-  };
-
-  const compressImage = (file: File, maxWidth: number = 800, quality: number = 0.7): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      
-      img.onload = () => {
-        // Calcular dimensões mantendo proporção
-        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
-        canvas.width = img.width * ratio;
-        canvas.height = img.height * ratio;
-        
-        // Desenhar imagem redimensionada
-        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-        
-        // Converter para base64 com compressão
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-        resolve(compressedDataUrl);
-      };
-      
-      img.onerror = () => reject(new Error('Erro ao carregar imagem'));
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      // Upload das imagens para o Supabase Storage
-      let imageUrls: string[] = [];
-      if (newApartment.images.length > 0) {
-        // Primeiro converte para base64 comprimido (fallback)
-        const compressedImages = await Promise.all(
-          newApartment.images.map((file) => compressImage(file, 800, 0.7))
-        );
-        
-        // Tenta fazer upload para o Supabase Storage
-        const uploadedUrls = await convertAndUploadImages(compressedImages);
-        imageUrls = uploadedUrls.length > 0 ? uploadedUrls : compressedImages;
-      }
-      
-      // Upload do vídeo para o Supabase Storage
-      let videoUrl: string | undefined;
-      if (newApartment.video) {
-        const uploadedVideoUrl = await convertAndUploadVideo(URL.createObjectURL(newApartment.video));
-        videoUrl = uploadedVideoUrl || URL.createObjectURL(newApartment.video);
-      }
-      
-      const apartmentData = {
-        title: newApartment.title,
-        description: newApartment.description,
-        type: newApartment.type,
-        price: {
-          monthly: parseFloat(newApartment.price.monthly) || 0,
-          daily: newApartment.type !== 'fixed' ? (parseFloat(newApartment.price.daily) || 0) : 0
-        },
-        size: parseInt(newApartment.size) || 0,
-        bedrooms: parseInt(newApartment.bedrooms) || 1,
-        bathrooms: parseInt(newApartment.bathrooms) || 1,
-        amenities: newApartment.amenities,
-        nearbyAttractions: newApartment.nearbyAttractions,
-        location: {
-          address: newApartment.location.address === 'casarao-museu' ? 'Casarão Museu' : 'Casarão Fico',
-          lat: newApartment.location.address === 'casarao-museu' ? -23.5505 : -23.5515,
-          lng: newApartment.location.address === 'casarao-museu' ? -46.6333 : -46.6343
-        },
-        images: imageUrls,
-        video: videoUrl,
-        available: true
-      };
-      
-      try {
-        await addApartment(apartmentData);
-        
-        // Modal de sucesso melhorado
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-        modal.innerHTML = `
-          <div class="bg-white rounded-lg p-6 max-w-sm mx-4 text-center">
-            <div class="text-green-600 text-4xl mb-4">✓</div>
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">Sucesso!</h3>
-            <p class="text-gray-600 mb-4">Apartamento adicionado com sucesso!</p>
-            <button onclick="this.closest('.fixed').remove()" class="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90">
-              OK
-            </button>
-          </div>
-        `;
-        document.body.appendChild(modal);
-        
-        setTimeout(() => {
-          if (document.body.contains(modal)) {
-            document.body.removeChild(modal);
-          }
-        }, 3000);
-        
-        setActiveTab('list');
-        resetForm();
-      } catch (storageError) {
-        // Erro já tratado no useApartments
-        return;
-      }
-    } catch (error) {
-      console.error('Erro ao adicionar apartamento:', error);
-      alert('Erro ao adicionar apartamento. Tente novamente.');
-    }
-  };
-
-  const resetForm = () => {
-    setNewApartment({
-      title: '',
-      description: '',
-      type: 'temporary',
-      price: { monthly: '', daily: '' },
-      size: '',
-      bedrooms: '',
-      bathrooms: '',
-      amenities: [],
-      location: { address: 'casarao-museu', lat: 0, lng: 0 },
-      nearbyAttractions: [],
-      images: [],
-      video: null
-    });
-    setAmenityInput('');
-    setAttractionInput({ name: '', distance: '', type: '' });
+  const startEditing = (apartmentId: string) => {
+    setEditingApartment(apartmentId);
+    setActiveTab('edit');
   };
 
   const handleDeleteApartment = (apartmentId: string) => {
     setConfirmModal({
       isOpen: true,
-      title: 'Excluir Apartamento',
-      message: 'Tem certeza que deseja excluir este apartamento?',
-      onConfirm: async () => {
-        await deleteApartment(apartmentId);
-        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
-        
-        // Modal de sucesso
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-        modal.innerHTML = `
-          <div class="bg-white rounded-lg p-6 max-w-sm mx-4 text-center">
-            <div class="text-green-600 text-4xl mb-4">✓</div>
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">Sucesso!</h3>
-            <p class="text-gray-600 mb-4">Apartamento excluído com sucesso!</p>
-            <button onclick="this.closest('.fixed').remove()" class="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90">
-              OK
-            </button>
-          </div>
-        `;
-        document.body.appendChild(modal);
-        
-        setTimeout(() => {
-          if (document.body.contains(modal)) {
-            document.body.removeChild(modal);
-          }
-        }, 3000);
+      title: 'Confirmar Exclusão',
+      message: 'Tem certeza que deseja excluir este apartamento? Esta ação não pode ser desfeita.',
+      onConfirm: () => {
+        deleteApartment(apartmentId);
+        setConfirmModal({ ...confirmModal, isOpen: false });
       }
     });
   };
@@ -294,39 +77,214 @@ const Admin: React.FC = () => {
       isOpen: true,
       title: 'Limpar Todos os Apartamentos',
       message: 'Tem certeza que deseja excluir TODOS os apartamentos? Esta ação não pode ser desfeita.',
-      onConfirm: async () => {
-        await clearAllApartments();
-        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
-        
-        // Modal de sucesso
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-        modal.innerHTML = `
-          <div class="bg-white rounded-lg p-6 max-w-sm mx-4 text-center">
-            <div class="text-green-600 text-4xl mb-4">✓</div>
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">Sucesso!</h3>
-            <p class="text-gray-600 mb-4">Todos os apartamentos foram removidos!</p>
-            <button onclick="this.closest('.fixed').remove()" class="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90">
-              OK
-            </button>
-          </div>
-        `;
-        document.body.appendChild(modal);
-        
-        setTimeout(() => {
-          if (document.body.contains(modal)) {
-            document.body.removeChild(modal);
-          }
-        }, 3000);
+      onConfirm: () => {
+        clearAllApartments();
+        setConfirmModal({ ...confirmModal, isOpen: false });
       }
     });
+  };
+
+  const openInterestModal = (apartmentTitle: string, interests: any[]) => {
+    setInterestModal({
+      isOpen: true,
+      apartmentTitle,
+      interests
+    });
+  };
+
+  // Funções para o formulário de adicionar apartamento
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setApartmentForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleAmenityChange = (amenity: string, checked: boolean) => {
+    setApartmentForm(prev => ({
+      ...prev,
+      amenities: checked 
+        ? [...prev.amenities, amenity]
+        : prev.amenities.filter(a => a !== amenity)
+    }));
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    
+    // Validar tamanho dos arquivos (máximo 10MB cada)
+    const validFiles = files.filter(file => {
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`Arquivo ${file.name} é muito grande. Máximo 10MB por imagem.`);
+        return false;
+      }
+      return true;
+    });
+    
+    // Validar tipos de arquivo
+    const imageFiles = validFiles.filter(file => {
+      if (!file.type.startsWith('image/')) {
+        alert(`Arquivo ${file.name} não é uma imagem válida.`);
+        return false;
+      }
+      return true;
+    });
+    
+    setApartmentImages(prev => [...prev, ...imageFiles]);
+    
+    // Limpar o input para permitir selecionar os mesmos arquivos novamente
+    e.target.value = '';
+  };
+
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    
+    if (file) {
+      // Validar tamanho do vídeo (máximo 50MB)
+      if (file.size > 50 * 1024 * 1024) {
+        alert('Vídeo muito grande. Máximo 50MB.');
+        e.target.value = '';
+        return;
+      }
+      
+      // Validar tipo de arquivo
+      if (!file.type.startsWith('video/')) {
+        alert('Arquivo selecionado não é um vídeo válido.');
+        e.target.value = '';
+        return;
+      }
+      
+      setApartmentVideo(file);
+    }
+    
+    // Limpar o input
+    e.target.value = '';
+  };
+
+  const removeImage = (index: number) => {
+    setApartmentImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeVideo = () => {
+    setApartmentVideo(null);
+  };
+
+  // Função para abrir o seletor de imagens programaticamente
+  const openImageSelector = () => {
+    const input = document.getElementById('image-upload') as HTMLInputElement;
+    if (input) {
+      input.click();
+    }
+  };
+
+  // Função para abrir o seletor de vídeo programaticamente
+  const openVideoSelector = () => {
+    const input = document.getElementById('video-upload') as HTMLInputElement;
+    if (input) {
+      input.click();
+    }
+  };
+
+  const resetForm = () => {
+    setApartmentForm({
+      title: '',
+      type: 'fixed',
+      description: '',
+      size: '',
+      bedrooms: '',
+      bathrooms: '',
+      condominium: '',
+      amenities: [],
+      nearbyAttractions: ''
+    });
+    setApartmentImages([]);
+    setApartmentVideo(null);
+  };
+
+  const handleSubmitApartment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!apartmentForm.title || !apartmentForm.condominium || !apartmentForm.description) {
+      alert('Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Upload das imagens
+      let imageUrls: string[] = [];
+      if (apartmentImages.length > 0) {
+        imageUrls = await uploadImages(apartmentImages);
+      }
+
+      // Upload do vídeo
+      let videoUrl: string | undefined;
+      if (apartmentVideo) {
+        const result = await uploadVideo(apartmentVideo);
+        videoUrl = result || undefined;
+      }
+
+      // Definir endereço baseado no condomínio
+      const addresses = {
+        'casarao-museu': 'Rua Tabor, 255 - 04202-020 - Ipiranga, São Paulo',
+        'casarao-fico': 'Rua do Fico, 70/76 - 04201-000 - Ipiranga, São Paulo'
+      };
+
+      // Processar atrações próximas
+      const nearbyAttractions = apartmentForm.nearbyAttractions
+        .split('\n')
+        .filter(line => line.trim())
+        .map(line => ({
+          name: line.trim(),
+          distance: '0.5 km',
+          type: 'Local'
+        }));
+
+      // Criar objeto do apartamento
+      const newApartment = {
+        title: apartmentForm.title,
+        description: apartmentForm.description,
+        price: { monthly: 0, daily: 0 }, // Valores serão sempre "a consultar"
+        images: imageUrls,
+        video: videoUrl,
+        amenities: apartmentForm.amenities,
+        size: parseInt(apartmentForm.size) || 0,
+        bedrooms: parseInt(apartmentForm.bedrooms) || 0,
+        bathrooms: parseInt(apartmentForm.bathrooms) || 0,
+        type: apartmentForm.type,
+        available: true, // Novo apartamento sempre disponível
+        location: {
+          lat: apartmentForm.condominium === 'casarao-museu' ? -23.5505 : -23.5510,
+          lng: apartmentForm.condominium === 'casarao-museu' ? -46.6333 : -46.6340,
+          address: addresses[apartmentForm.condominium],
+          condominium: apartmentForm.condominium
+        },
+        nearbyAttractions
+      };
+
+      // Adicionar apartamento
+      await addApartment(newApartment);
+      
+      // Resetar formulário e fechar modal
+      resetForm();
+      setAddApartmentModal(false);
+      
+      alert('Apartamento adicionado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao adicionar apartamento:', error);
+      alert('Erro ao adicionar apartamento. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div 
       className="min-h-screen relative"
       style={{
-        backgroundImage: 'url(/background/Home.jpeg)',
+        backgroundImage: 'url(/background/Admin.png)',
         backgroundAttachment: 'fixed',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
@@ -338,45 +296,272 @@ const Admin: React.FC = () => {
         className="fixed inset-0 z-0"
         style={{ backgroundColor: '#e6e5df', opacity: 0.65 }}
       />
-      <AdminHeader />
-      <div className="relative z-10 pt-20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-16"></div>
-
-          {/* Tabs */}
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            <div className="border-b border-gray-200">
-              <nav className="flex space-x-8 px-6">
+      <div className="relative z-10">
+        <div className="flex min-h-screen">
+          {/* Sidebar */}
+          <div className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white shadow-lg transition-all duration-300 flex-shrink-0 flex flex-col`}>
+            <div className="p-4 flex-1">
+              {/* Header da Sidebar com Logo */}
+              <div className={`flex items-center mb-6 ${sidebarOpen ? 'justify-between' : 'flex-col space-y-3'}`}>
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+                
+                <div className={`flex items-center ${sidebarOpen ? 'ml-3' : ''}`}>
+                  <img 
+                    src="/logo/Arvore.jpg" 
+                    alt="Logo Casarão" 
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                  {sidebarOpen && (
+                    <span className="ml-2 text-sm font-semibold text-gray-800">Admin</span>
+                  )}
+                </div>
+              </div>
+              
+              <nav className="space-y-2">
+                <button
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
+                    activeTab === 'dashboard'
+                      ? 'bg-primary text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <BarChart3 className="h-5 w-5" />
+                  {sidebarOpen && <span className="ml-3">Dashboard</span>}
+                </button>
+                
                 <button
                   onClick={() => setActiveTab('list')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
                     activeTab === 'list'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'bg-primary text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  Lista de Apartamentos ({apartments.length})
+                  <List className="h-5 w-5" />
+                  {sidebarOpen && <span className="ml-3">Apartamentos ({apartments.length})</span>}
                 </button>
-                <button
-                  onClick={() => setActiveTab('add')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'add'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  Adicionar Apartamento
-                </button>
+                
+                
+                {editingApartment && (
+                  <button
+                    onClick={() => setActiveTab('edit')}
+                    className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
+                      activeTab === 'edit'
+                        ? 'bg-primary text-white'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Edit className="h-5 w-5" />
+                    {sidebarOpen && <span className="ml-3">Editar Apartamento</span>}
+                  </button>
+                )}
               </nav>
             </div>
+            
+            {/* Botão de Sair */}
+            <div className="p-4 border-t border-gray-200">
+              <button
+                onClick={() => window.location.href = '/'}
+                className="w-full flex items-center px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <LogOut className="h-5 w-5" />
+                {sidebarOpen && <span className="ml-3">Sair</span>}
+              </button>
+            </div>
+          </div>
 
-            <div className="bg-white rounded-b-lg shadow-xl p-8">
+          {/* Main Content */}
+          <div className="flex-1 p-6">
+            <div className="bg-white rounded-lg shadow-lg p-8">
+            {activeTab === 'dashboard' && (
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h2>
+                
+                {/* Cards de Estatísticas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-blue-100 text-sm">Total de Apartamentos</p>
+                        <p className="text-2xl font-bold">{apartments.length}</p>
+                      </div>
+                      <Home className="h-8 w-8 text-blue-200" />
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-green-100 text-sm">Apartamentos Disponíveis</p>
+                        <p className="text-2xl font-bold">{apartments.filter(apt => apt.available).length}</p>
+                      </div>
+                      <ToggleRight className="h-8 w-8 text-green-200" />
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-red-100 text-sm">Apartamentos Alugados</p>
+                        <p className="text-2xl font-bold">{apartments.filter(apt => !apt.available).length}</p>
+                      </div>
+                      <ToggleLeft className="h-8 w-8 text-red-200" />
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-purple-100 text-sm">Total de Visualizações</p>
+                        <p className="text-2xl font-bold">{stats.totalViews}</p>
+                      </div>
+                      <Eye className="h-8 w-8 text-purple-200" />
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-orange-100 text-sm">Interesse em Disponíveis</p>
+                        <p className="text-2xl font-bold">{getInterestsCount().available}</p>
+                      </div>
+                      <Star className="h-8 w-8 text-orange-200" />
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-yellow-100 text-sm">Interesse em Alugados</p>
+                        <p className="text-2xl font-bold">{getInterestsCount().rented}</p>
+                      </div>
+                      <MessageCircle className="h-8 w-8 text-yellow-200" />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Estatísticas por Apartamento */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Eye className="h-5 w-5 mr-2" />
+                      Visualizações por Apartamento
+                    </h3>
+                    <div className="space-y-3">
+                      {apartments.map((apartment) => (
+                        <div key={apartment.id} className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600 truncate flex-1 mr-2">
+                            {apartment.title}
+                          </span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {stats.apartmentViews[apartment.id] || 0} visualizações
+                          </span>
+                        </div>
+                      ))}
+                      {apartments.length === 0 && (
+                        <p className="text-gray-500 text-sm">Nenhum apartamento cadastrado</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <MessageCircle className="h-5 w-5 mr-2" />
+                      Mensagens por Apartamento
+                    </h3>
+                    <div className="space-y-3">
+                      {apartments.map((apartment) => (
+                        <div key={apartment.id} className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600 truncate flex-1 mr-2">
+                            {apartment.title}
+                          </span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {stats.apartmentMessages[apartment.id] || 0} mensagens
+                          </span>
+                        </div>
+                      ))}
+                      {apartments.length === 0 && (
+                        <p className="text-gray-500 text-sm">Nenhum apartamento cadastrado</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Seção de Apartamentos com Interesse */}
+                <div className="mt-8">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-6">Apartamentos com Interesse dos Usuários</h3>
+                  
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {getApartmentsWithInterests().map((apartment) => (
+                        <div key={apartment.apartment_id} className={`bg-white p-4 rounded-lg border flex items-center justify-between ${
+                          !apartment.apartment_available ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'
+                        }`}>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-medium text-gray-900">{apartment.apartment_title}</h4>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                apartment.apartment_available 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {apartment.apartment_available ? 'Disponível' : 'Alugado'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">{apartment.interests.length}</span> pessoa(s) interessada(s)
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Último interesse: {new Date(apartment.interests[0]?.created_at || '').toLocaleDateString('pt-BR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                          
+                          <button
+                            onClick={() => openInterestModal(apartment.apartment_title, apartment.interests)}
+                            className="ml-4 p-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                            title="Ver detalhes dos interessados"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                      
+                      {getApartmentsWithInterests().length === 0 && (
+                        <div className="text-center py-8">
+                          <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                          <p className="text-gray-500">Nenhum interesse registrado ainda</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'list' && (
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
-                    <h2 className="text-2xl font-bold text-gray-900">Apartamentos Cadastrados</h2>
-                    <MigrationButton />
+                    <h2 className="text-2xl font-bold text-gray-900">Apartamentos</h2>
+                    <button
+                      onClick={() => setAddApartmentModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Adicionar Apartamento
+                    </button>
                   </div>
                   {apartments.length > 0 && (
                     <button
@@ -387,555 +572,216 @@ const Admin: React.FC = () => {
                     </button>
                   )}
                 </div>
+
+                {/* Sub-abas para tipos de apartamento */}
+                <div className="flex justify-center mb-8">
+                  <div className="bg-white rounded-full p-1 shadow-md relative overflow-hidden">
+                    {/* Indicador deslizante */}
+                    <div
+                      className="absolute top-0 left-0 h-full bg-primary/10 rounded-full transition-all duration-300 ease-in-out"
+                      style={{
+                        width: '33.333%',
+                        transform: `translateX(${
+                          apartmentSubTab === 'fixed' ? '0%' : 
+                          apartmentSubTab === 'temporary' ? '100%' : '200%'
+                        })`,
+                        zIndex: 1
+                      }}
+                    />
+                    <div className="flex space-x-1 relative z-10">
+                      <button
+                        onClick={() => setApartmentSubTab('fixed')}
+                        className={`flex items-center space-x-2 px-6 py-3 rounded-full font-medium transition-all duration-300 relative ${
+                          apartmentSubTab === 'fixed'
+                            ? 'text-primary'
+                            : 'text-gray-600 hover:text-primary'
+                        }`}
+                        style={{ zIndex: 2 }}
+                      >
+                        <Home className="h-4 w-4" />
+                        <span>Moradia Fixa</span>
+                      </button>
+                      <button
+                        onClick={() => setApartmentSubTab('temporary')}
+                        className={`flex items-center space-x-2 px-6 py-3 rounded-full font-medium transition-all duration-300 relative ${
+                          apartmentSubTab === 'temporary'
+                            ? 'text-primary'
+                            : 'text-gray-600 hover:text-primary'
+                        }`}
+                        style={{ zIndex: 2 }}
+                      >
+                        <Calendar className="h-4 w-4" />
+                        <span>Temporada</span>
+                      </button>
+                      <button
+                        onClick={() => setApartmentSubTab('experience')}
+                        className={`flex items-center space-x-2 px-6 py-3 rounded-full font-medium transition-all duration-300 relative ${
+                          apartmentSubTab === 'experience'
+                            ? 'text-primary'
+                            : 'text-gray-600 hover:text-primary'
+                        }`}
+                        style={{ zIndex: 2 }}
+                      >
+                        <Star className="h-4 w-4" />
+                        <span>Experiências</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
                 
                 {isLoading ? (
                   <div className="text-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
                     <p className="text-gray-600">Carregando apartamentos...</p>
                   </div>
-                ) : apartments.length === 0 ? (
+                ) : apartments.filter(apt => 
+                  apartmentSubTab === 'experience' ? apt.type === 'experience' :
+                  apartmentSubTab === 'fixed' ? (apt.type === 'fixed' || apt.type === 'both') :
+                  apartmentSubTab === 'temporary' ? (apt.type === 'temporary' || apt.type === 'both') : false
+                ).length === 0 ? (
                   <div className="text-center py-12">
-                    <Home className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum apartamento cadastrado</h3>
-                    <p className="text-gray-500 mb-4">Comece adicionando seu primeiro apartamento.</p>
+                    {apartmentSubTab === 'experience' ? (
+                      <Star className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
+                    ) : (
+                      <Home className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    )}
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Nenhum{apartmentSubTab === 'experience' ? 'a experiência' : ' apartamento'} cadastrado
+                    </h3>
+                    <p className="text-gray-500 mb-4">
+                      Adicione {apartmentSubTab === 'experience' ? 'sua primeira experiência' : 'seu primeiro apartamento'} para começar.
+                    </p>
                     <button
-                      onClick={() => setActiveTab('add')}
+                      onClick={() => setAddApartmentModal(true)}
                       className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Adicionar Primeiro Apartamento
+                      Adicionar {apartmentSubTab === 'experience' ? 'Experiência' : 'Apartamento'}
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-8">
-                    {/* Moradia Fixa */}
-                    {apartments.filter(apt => apt.type === 'fixed' || apt.type === 'both').length > 0 && (
-                      <div>
-                        <div className="flex items-center mb-4">
+                  <div>
+                    {/* Seção atual baseada na sub-aba */}
+                    <div>
+                      <div className="flex items-center mb-4">
+                        {apartmentSubTab === 'fixed' ? (
                           <Home className="h-5 w-5 text-primary mr-2" />
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            Moradia Fixa ({apartments.filter(apt => apt.type === 'fixed' || apt.type === 'both').length})
-                          </h3>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                          {apartments
-                            .filter(apt => apt.type === 'fixed' || apt.type === 'both')
-                            .map((apartment) => (
-                              <div key={apartment.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                                <div className="aspect-video bg-gray-200 relative">
-                                  {apartment.images && apartment.images.length > 0 ? (
-                                    <img
-                                      src={apartment.images[0]}
-                                      alt={apartment.title}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                      <Home className="h-12 w-12 text-gray-400" />
-                                    </div>
-                                  )}
-                                  <div className="absolute top-2 right-2">
-                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                      apartment.available 
-                                        ? 'bg-green-100 text-green-800' 
-                                        : 'bg-red-100 text-red-800'
-                                    }`}>
-                                      {apartment.available ? 'Disponível' : 'Indisponível'}
-                                    </span>
-                                  </div>
-                                </div>
-                                
-                                <div className="p-4">
-                                  <h3 className="font-semibold text-gray-900 mb-2">{apartment.title}</h3>
-                                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{apartment.description}</p>
-                                  
-                                  <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
-                                    <span className="capitalize">{apartment.type === 'fixed' ? 'Moradia Fixa' : apartment.type === 'temporary' ? 'Temporada' : 'Ambos'}</span>
-                                    <span>{apartment.size}m² • {apartment.bedrooms} quartos</span>
-                                  </div>
-                                  
-                                  <div className="flex items-center justify-between">
-                                    <div className="text-sm">
-                                      {apartment.type !== 'temporary' && (
-                                        <div className="text-gray-900 font-medium">
-                                          R$ {apartment.price.monthly.toLocaleString()}/mês
-                                        </div>
-                                      )}
-                                      {apartment.type !== 'fixed' && (
-                                        <div className="text-gray-600">
-                                          R$ {apartment.price.daily}/dia
-                                        </div>
-                                      )}
-                                    </div>
-                                    
-                                    <div className="flex items-center space-x-2">
-                                      <button
-                                        onClick={() => handleDeleteApartment(apartment.id)}
-                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                        title="Excluir apartamento"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Temporada */}
-                    {apartments.filter(apt => apt.type === 'temporary' || apt.type === 'both').length > 0 && (
-                      <div>
-                        <div className="flex items-center mb-4">
+                        ) : apartmentSubTab === 'temporary' ? (
                           <Calendar className="h-5 w-5 text-primary mr-2" />
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            Temporada ({apartments.filter(apt => apt.type === 'temporary' || apt.type === 'both').length})
-                          </h3>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                          {apartments
-                            .filter(apt => apt.type === 'temporary' || apt.type === 'both')
-                            .map((apartment) => (
-                              <div key={apartment.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                                <div className="aspect-video bg-gray-200 relative">
-                                  {apartment.images && apartment.images.length > 0 ? (
-                                    <img
-                                      src={apartment.images[0]}
-                                      alt={apartment.title}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
+                        ) : (
+                          <Star className="h-5 w-5 text-yellow-600 mr-2" />
+                        )}
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {apartmentSubTab === 'fixed' ? 'Moradia Fixa' :
+                           apartmentSubTab === 'temporary' ? 'Temporada' : 'Experiências Únicas'} 
+                          ({apartments.filter(apt => 
+                            apartmentSubTab === 'experience' ? apt.type === 'experience' :
+                            apartmentSubTab === 'fixed' ? (apt.type === 'fixed' || apt.type === 'both') :
+                            apartmentSubTab === 'temporary' ? (apt.type === 'temporary' || apt.type === 'both') : false
+                          ).length})
+                        </h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                        {apartments
+                          .filter(apt => 
+                            apartmentSubTab === 'experience' ? apt.type === 'experience' :
+                            apartmentSubTab === 'fixed' ? (apt.type === 'fixed' || apt.type === 'both') :
+                            apartmentSubTab === 'temporary' ? (apt.type === 'temporary' || apt.type === 'both') : false
+                          )
+                          .map((apartment) => (
+                            <div key={apartment.id} className={`border rounded-lg overflow-hidden hover:shadow-md transition-shadow ${
+                              apartment.type === 'experience' ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'
+                            }`}>
+                              <div className="aspect-video bg-gray-200 relative">
+                                {apartment.images && apartment.images.length > 0 ? (
+                                  <img
+                                    src={apartment.images[0]}
+                                    alt={apartment.title}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    {apartment.type === 'experience' ? (
+                                      <Star className="h-12 w-12 text-yellow-400" />
+                                    ) : (
                                       <Home className="h-12 w-12 text-gray-400" />
-                                    </div>
-                                  )}
-                                  <div className="absolute top-2 right-2">
-                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                      apartment.available 
-                                        ? 'bg-green-100 text-green-800' 
-                                        : 'bg-red-100 text-red-800'
-                                    }`}>
-                                      {apartment.available ? 'Disponível' : 'Indisponível'}
-                                    </span>
+                                    )}
                                   </div>
+                                )}
+                                <div className="absolute top-2 right-2">
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    apartment.available 
+                                      ? 'bg-green-100 text-green-800' 
+                                      : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {apartment.available ? 'Disponível' : 'Alugado'}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              <div className="p-4">
+                                <h3 className="font-semibold text-gray-900 mb-2">{apartment.title}</h3>
+                                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{apartment.description}</p>
+                                
+                                <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
+                                  <span className="capitalize">
+                                    {apartment.type === 'fixed' ? 'Moradia Fixa' : 
+                                     apartment.type === 'temporary' ? 'Temporada' : 
+                                     apartment.type === 'experience' ? 'Experiência Única' : 'Ambos'}
+                                  </span>
+                                  <span>{apartment.size}m² • {apartment.bedrooms} quartos</span>
                                 </div>
                                 
-                                <div className="p-4">
-                                  <h3 className="font-semibold text-gray-900 mb-2">{apartment.title}</h3>
-                                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{apartment.description}</p>
-                                  
-                                  <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
-                                    <span className="capitalize">{apartment.type === 'fixed' ? 'Moradia Fixa' : apartment.type === 'temporary' ? 'Temporada' : 'Ambos'}</span>
-                                    <span>{apartment.size}m² • {apartment.bedrooms} quartos</span>
+                                <div className="flex items-center justify-between">
+                                  <div className="text-sm">
+                                    <div className="text-gray-600 mb-1">
+                                      Valores a consultar
+                                    </div>
                                   </div>
                                   
-                                  <div className="flex items-center justify-between">
-                                    <div className="text-sm">
-                                      {apartment.type !== 'temporary' && (
-                                        <div className="text-gray-900 font-medium">
-                                          R$ {apartment.price.monthly.toLocaleString()}/mês
-                                        </div>
-                                      )}
-                                      {apartment.type !== 'fixed' && (
-                                        <div className="text-gray-600">
-                                          R$ {apartment.price.daily}/dia
-                                        </div>
-                                      )}
-                                    </div>
-                                    
-                                    <div className="flex items-center space-x-2">
-                                      <button
-                                        onClick={() => handleDeleteApartment(apartment.id)}
-                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                        title="Excluir apartamento"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </button>
-                                    </div>
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={() => updateApartment(apartment.id, { available: !apartment.available })}
+                                      className={`p-2 rounded-lg transition-colors ${
+                                        apartment.available 
+                                          ? 'text-green-600 hover:bg-green-50' 
+                                          : 'text-red-600 hover:bg-red-50'
+                                      }`}
+                                      title={apartment.available ? 'Marcar como alugado' : 'Marcar como disponível'}
+                                    >
+                                      {apartment.available ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
+                                    </button>
+                                    <button
+                                      onClick={() => startEditing(apartment.id)}
+                                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                      title="Editar apartamento"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteApartment(apartment.id)}
+                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="Excluir apartamento"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
                                   </div>
                                 </div>
                               </div>
-                            ))}
-                        </div>
+                            </div>
+                          ))}
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
             )}
 
-            {activeTab === 'add' && (
+
+            {activeTab === 'edit' && (
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Adicionar Novo Apartamento</h2>
-                
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Informações Básicas */}
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Título do Apartamento
-                      </label>
-                      <input
-                        type="text"
-                        name="title"
-                        required
-                        value={newApartment.title}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-base"
-                        placeholder="Ex: Apartamento Cozy no Centro"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Tipo de Moradia
-                        </label>
-                        <select
-                          name="type"
-                          value={newApartment.type}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-base"
-                        >
-                          <option value="temporary">Temporada</option>
-                          <option value="fixed">Moradia Fixa</option>
-                          <option value="both">Ambos</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Localização
-                        </label>
-                        <select
-                          name="location.address"
-                          required
-                          value={newApartment.location.address}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-base"
-                        >
-                          <option value="casarao-museu">Casarão Museu</option>
-                          <option value="casarao-fico">Casarão Fico</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Descrição
-                      </label>
-                      <textarea
-                        name="description"
-                        required
-                        rows={4}
-                        value={newApartment.description}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-base resize-none"
-                        placeholder="Descreva o apartamento..."
-                      />
-                    </div>
-                  </div>
-
-                  {/* Preços */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900">Preços</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Preço Mensal (R$)
-                        </label>
-                        <input
-                          type="number"
-                          name="price.monthly"
-                          required
-                          value={newApartment.price.monthly}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-base"
-                          placeholder="0"
-                        />
-                      </div>
-
-                      {newApartment.type !== 'fixed' && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Preço Diário (R$)
-                          </label>
-                          <input
-                            type="number"
-                            name="price.daily"
-                            required
-                            value={newApartment.price.daily}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-base"
-                            placeholder="0"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Características */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900">Características</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Tamanho (m²)
-                        </label>
-                        <input
-                          type="number"
-                          name="size"
-                          required
-                          value={newApartment.size}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-base"
-                          placeholder="0"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Quartos
-                        </label>
-                        <input
-                          type="number"
-                          name="bedrooms"
-                          required
-                          min="1"
-                          value={newApartment.bedrooms}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-base"
-                          placeholder="1"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Banheiros
-                        </label>
-                        <input
-                          type="number"
-                          name="bathrooms"
-                          required
-                          min="1"
-                          value={newApartment.bathrooms}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-base"
-                          placeholder="1"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Comodidades */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900">Comodidades</h3>
-                    <div className="flex flex-col sm:flex-row gap-2 mb-2">
-                      <input
-                        type="text"
-                        value={amenityInput}
-                        onChange={(e) => setAmenityInput(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-base"
-                        placeholder="Ex: Wi-Fi, Ar condicionado..."
-                      />
-                      <button
-                        type="button"
-                        onClick={addAmenity}
-                        className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 whitespace-nowrap"
-                      >
-                        Adicionar
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {newApartment.amenities.map((amenity, index) => (
-                        <span
-                          key={index}
-                          className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm flex items-center"
-                        >
-                          {amenity}
-                          <button
-                            type="button"
-                            onClick={() => removeAmenity(index)}
-                            className="ml-2 text-red-500 hover:text-red-700"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Pontos de Interesse */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900">Pontos de Interesse Próximos</h3>
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        <input
-                          type="text"
-                          value={attractionInput.name}
-                          onChange={(e) => setAttractionInput(prev => ({ ...prev, name: e.target.value }))}
-                          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-base"
-                          placeholder="Nome do local"
-                        />
-                        <input
-                          type="text"
-                          value={attractionInput.distance}
-                          onChange={(e) => setAttractionInput(prev => ({ ...prev, distance: e.target.value }))}
-                          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-base"
-                          placeholder="Ex: 500m"
-                        />
-                        <input
-                          type="text"
-                          value={attractionInput.type}
-                          onChange={(e) => setAttractionInput(prev => ({ ...prev, type: e.target.value }))}
-                          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-base"
-                          placeholder="Ex: Mercado"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={addAttraction}
-                        className="w-full sm:w-auto bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90"
-                      >
-                        Adicionar Ponto de Interesse
-                      </button>
-                    </div>
-                    <div className="space-y-2">
-                      {newApartment.nearbyAttractions.map((attraction, index) => (
-                        <div key={index} className="bg-gray-50 p-3 rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <span className="text-sm">
-                            <strong>{attraction.name}</strong> - {attraction.distance} ({attraction.type})
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => removeAttraction(index)}
-                            className="text-red-500 hover:text-red-700 self-end sm:self-center"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Upload de Imagens */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900">Imagens do Apartamento</h3>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                      <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        id="images"
-                      />
-                      <label
-                        htmlFor="images"
-                        className="cursor-pointer text-primary hover:text-primary/80 text-base"
-                      >
-                        Clique para selecionar imagens
-                      </label>
-                      <p className="text-sm text-gray-500 mt-1">PNG, JPG até 10MB cada</p>
-                    </div>
-                    
-                    {newApartment.images.length > 0 && (
-                      <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {newApartment.images.map((file, index) => {
-                          const imageUrl = URL.createObjectURL(file);
-                          return (
-                            <div key={index} className="relative">
-                              <img
-                                src={imageUrl}
-                                alt={`Preview ${index + 1}`}
-                                className="w-full h-24 object-cover rounded-md"
-                                onLoad={() => URL.revokeObjectURL(imageUrl)}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeImage(index)}
-                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Upload de Vídeo */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900">Vídeo do Apartamento (Opcional)</h3>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                      <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                      <input
-                        type="file"
-                        accept="video/*"
-                        onChange={handleVideoUpload}
-                        className="hidden"
-                        id="video"
-                      />
-                      <label
-                        htmlFor="video"
-                        className="cursor-pointer text-primary hover:text-primary/80 text-base"
-                      >
-                        Clique para selecionar vídeo
-                      </label>
-                      <p className="text-sm text-gray-500 mt-1">MP4, MOV até 200MB</p>
-                    </div>
-                    
-                    {newApartment.video && (
-                      <div className="mt-4">
-                        <div className="bg-gray-50 p-3 rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <span className="text-sm font-medium break-all">{newApartment.video.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => setNewApartment(prev => ({ ...prev, video: null }))}
-                            className="text-red-500 hover:text-red-700 self-end sm:self-center"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Botões */}
-                  <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-200">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveTab('list');
-                        resetForm();
-                      }}
-                      className="w-full sm:w-auto px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-base"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={uploadProgress.isUploading}
-                      className="w-full sm:w-auto px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 flex items-center justify-center text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {uploadProgress.isUploading ? (
-                        <>
-                          <Upload className="h-4 w-4 mr-2 animate-spin" />
-                          Fazendo upload...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="h-4 w-4 mr-2" />
-                          Salvar Apartamento
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Editar Apartamento</h2>
+                <p className="text-gray-600">Funcionalidade de editar apartamento será implementada aqui.</p>
               </div>
             )}
             </div>
@@ -950,19 +796,17 @@ const Admin: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">{confirmModal.title}</h3>
               <button
-                onClick={() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} })}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
             <p className="text-gray-600 mb-6">{confirmModal.message}</p>
-            
-            <div className="flex flex-col sm:flex-row gap-3 justify-end">
+            <div className="flex justify-end space-x-3">
               <button
-                onClick={() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} })}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
               >
                 Cancelar
               </button>
@@ -971,6 +815,418 @@ const Admin: React.FC = () => {
                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
               >
                 Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalhes dos Interessados */}
+      {interestModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Interessados em: {interestModal.apartmentTitle}
+              </h3>
+              <button
+                onClick={() => setInterestModal({ ...interestModal, isOpen: false })}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto max-h-96">
+              <div className="space-y-3">
+                {interestModal.interests.map((interest, index) => (
+                  <div key={interest.id} className="bg-gray-50 p-4 rounded-lg border">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <span className="bg-primary text-white text-sm font-medium px-2 py-1 rounded-full">
+                          #{index + 1}
+                        </span>
+                        <span className="font-medium text-gray-900">{interest.user_name}</span>
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {new Date(interest.created_at || '').toLocaleDateString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        interest.apartment_available 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {interest.apartment_available ? 'Apartamento Disponível' : 'Apartamento Alugado'}
+                      </span>
+                      
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        interest.user_type === 'available' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {interest.user_type === 'available' ? 'Interesse em Disponível' : 'Interesse em Alugado'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {interestModal.interests.length === 0 && (
+                <div className="text-center py-8">
+                  <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">Nenhum interesse registrado</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between text-sm text-gray-600">
+                <span>Total de interessados: <strong>{interestModal.interests.length}</strong></span>
+                <span>Ordenado por ordem de chegada (mais recente primeiro)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Adicionar Apartamento */}
+      {addApartmentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Adicionar Novo Apartamento
+              </h3>
+              <button
+                onClick={() => {
+                  resetForm();
+                  setAddApartmentModal(false);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto flex-1 p-6">
+              <form onSubmit={handleSubmitApartment} className="space-y-6">
+                {/* Informações Básicas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Título do Apartamento
+                    </label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={apartmentForm.title}
+                      onChange={handleFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Ex: Apartamento Aconchegante no Centro"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tipo de Apartamento
+                    </label>
+                    <select 
+                      name="type"
+                      value={apartmentForm.type}
+                      onChange={handleFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    >
+                      <option value="fixed">Moradia Fixa</option>
+                      <option value="temporary">Temporada</option>
+                      <option value="both">Ambos</option>
+                      <option value="experience">Experiência</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Descrição */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descrição
+                  </label>
+                  <textarea
+                    name="description"
+                    value={apartmentForm.description}
+                    onChange={handleFormChange}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Descreva o apartamento, suas características e diferenciais..."
+                    required
+                  />
+                </div>
+
+                {/* Detalhes do Apartamento */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tamanho (m²)
+                    </label>
+                    <input
+                      type="number"
+                      name="size"
+                      value={apartmentForm.size}
+                      onChange={handleFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Ex: 45"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Quartos
+                    </label>
+                    <input
+                      type="number"
+                      name="bedrooms"
+                      value={apartmentForm.bedrooms}
+                      onChange={handleFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Ex: 2"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Banheiros
+                    </label>
+                    <input
+                      type="number"
+                      name="bathrooms"
+                      value={apartmentForm.bathrooms}
+                      onChange={handleFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Ex: 1"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Localização - Seleção de Condomínio */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Condomínio
+                  </label>
+                  <select 
+                    name="condominium"
+                    value={apartmentForm.condominium}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required
+                  >
+                    <option value="">Selecione o condomínio</option>
+                    <option value="casarao-museu">Casarão Museu - Rua Tabor, 255 - 04202-020 - Ipiranga, São Paulo</option>
+                    <option value="casarao-fico">Casarão Fico - Rua do Fico, 70/76 - 04201-000 - Ipiranga, São Paulo</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    O endereço será automaticamente definido baseado no condomínio selecionado
+                  </p>
+                </div>
+
+                {/* Comodidades */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Comodidades
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {[
+                      'Wi-Fi', 'Ar Condicionado', 'TV', 'Cozinha Equipada', 
+                      'Máquina de Lavar', 'Estacionamento', 'Piscina', 'Academia',
+                      'Portaria 24h', 'Elevador', 'Varanda', 'Pet Friendly'
+                    ].map((amenity) => (
+                      <label key={amenity} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={apartmentForm.amenities.includes(amenity)}
+                          onChange={(e) => handleAmenityChange(amenity, e.target.checked)}
+                          className="rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">{amenity}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Atrações Próximas */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Atrações Próximas
+                  </label>
+                  <textarea
+                    name="nearbyAttractions"
+                    value={apartmentForm.nearbyAttractions}
+                    onChange={handleFormChange}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Liste as principais atrações próximas, uma por linha..."
+                  />
+                </div>
+
+                {/* Upload de Imagens */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Imagens do Apartamento
+                  </label>
+                  <label 
+                    htmlFor="image-upload"
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer block"
+                  >
+                    <div className="space-y-2">
+                      <div className="text-gray-400">
+                        <svg className="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                          <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium text-primary">Clique para fazer upload</span> ou arraste as imagens aqui
+                      </div>
+                      <p className="text-xs text-gray-500">PNG, JPG até 10MB cada</p>
+                      {apartmentImages.length > 0 && (
+                        <p className="text-sm text-green-600 font-medium">
+                          {apartmentImages.length} imagem(ns) selecionada(s)
+                        </p>
+                      )}
+                    </div>
+                    <input 
+                      type="file" 
+                      multiple 
+                      accept="image/*,image/jpeg,image/jpg,image/png,image/gif,image/webp" 
+                      onChange={handleImageUpload}
+                      className="hidden" 
+                      id="image-upload"
+                      capture="environment"
+                    />
+                  </label>
+                  
+                  {/* Preview das imagens selecionadas */}
+                  {apartmentImages.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Imagens selecionadas:</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {apartmentImages.map((file, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={`Preview ${index + 1}`}
+                              className="w-full h-20 object-cover rounded-lg border"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(index)}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                            >
+                              ×
+                            </button>
+                            <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                              {Math.round(file.size / 1024)}KB
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload de Vídeo */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Vídeo do Apartamento (Opcional)
+                  </label>
+                  <label 
+                    htmlFor="video-upload"
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer block"
+                  >
+                    <div className="space-y-2">
+                      <div className="text-gray-400">
+                        <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium text-primary">Clique para fazer upload do vídeo</span>
+                      </div>
+                      <p className="text-xs text-gray-500">MP4 até 50MB</p>
+                      {apartmentVideo && (
+                        <p className="text-sm text-green-600 font-medium">
+                          Vídeo selecionado: {apartmentVideo.name}
+                        </p>
+                      )}
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="video/*,video/mp4,video/mov,video/avi,video/wmv" 
+                      onChange={handleVideoUpload}
+                      className="hidden" 
+                      id="video-upload"
+                      capture="environment"
+                    />
+                  </label>
+                  
+                  {/* Preview do vídeo selecionado */}
+                  {apartmentVideo && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Vídeo selecionado:</h4>
+                      <div className="relative inline-block">
+                        <div className="bg-gray-100 rounded-lg p-4 border">
+                          <div className="flex items-center gap-3">
+                            <div className="text-gray-500">
+                              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">{apartmentVideo.name}</p>
+                              <p className="text-xs text-gray-500">{Math.round(apartmentVideo.size / (1024 * 1024))}MB</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={removeVideo}
+                              className="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            {/* Botões de Ação */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 flex-shrink-0 bg-white">
+              <button
+                onClick={() => {
+                  resetForm();
+                  setAddApartmentModal(false);
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? 'Adicionando...' : 'Adicionar Apartamento'}
               </button>
             </div>
           </div>

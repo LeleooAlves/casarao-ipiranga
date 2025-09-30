@@ -51,7 +51,8 @@ export const useApartments = () => {
           location: {
             lat: apt.location_lat,
             lng: apt.location_lng,
-            address: apt.location_address
+            address: apt.location_address,
+            condominium: apt.condominium
           },
           nearbyAttractions: apt.nearby_attractions
         }));
@@ -131,6 +132,7 @@ export const useApartments = () => {
           location_lat: apartment.location.lat,
           location_lng: apartment.location.lng,
           location_address: apartment.location.address,
+          condominium: apartment.location.condominium,
           nearby_attractions: apartment.nearbyAttractions
         })
         .select()
@@ -170,7 +172,8 @@ export const useApartments = () => {
           location: {
             lat: data.location_lat,
             lng: data.location_lng,
-            address: data.location_address
+            address: data.location_address,
+            condominium: data.condominium
           },
           nearbyAttractions: data.nearby_attractions
         };
@@ -196,6 +199,46 @@ export const useApartments = () => {
 
   const updateApartment = async (id: string, updates: Partial<Apartment>) => {
     try {
+      // Se o apartamento está sendo marcado como alugado (available: false), remove as imagens
+      if (updates.available === false) {
+        const apartment = apartments.find(apt => apt.id === id);
+        if (apartment && apartment.images && apartment.images.length > 0) {
+          // Remove imagens do Supabase Storage
+          try {
+            const imagePaths = apartment.images.map(imageUrl => {
+              // Extrai o caminho da imagem da URL
+              const urlParts = imageUrl.split('/');
+              return urlParts[urlParts.length - 1];
+            });
+            
+            await supabase.storage
+              .from('apartment-images')
+              .remove(imagePaths);
+          } catch (storageError) {
+            console.error('Erro ao remover imagens do storage:', storageError);
+          }
+          
+          // Remove as imagens do apartamento
+          updates.images = [];
+        }
+        
+        // Remove vídeo se existir
+        if (apartment && apartment.video) {
+          try {
+            const videoPath = apartment.video.split('/').pop();
+            if (videoPath) {
+              await supabase.storage
+                .from('apartment-videos')
+                .remove([videoPath]);
+            }
+          } catch (storageError) {
+            console.error('Erro ao remover vídeo do storage:', storageError);
+          }
+          
+          updates.video = undefined;
+        }
+      }
+
       // Converte updates para formato do Supabase
       const supabaseUpdates: any = {};
       if (updates.title) supabaseUpdates.title = updates.title;
@@ -204,7 +247,7 @@ export const useApartments = () => {
         supabaseUpdates.price_monthly = updates.price.monthly;
         supabaseUpdates.price_daily = updates.price.daily;
       }
-      if (updates.images) supabaseUpdates.images = updates.images;
+      if (updates.images !== undefined) supabaseUpdates.images = updates.images;
       if (updates.video !== undefined) supabaseUpdates.video = updates.video;
       if (updates.amenities) supabaseUpdates.amenities = updates.amenities;
       if (updates.size) supabaseUpdates.size = updates.size;
@@ -216,6 +259,7 @@ export const useApartments = () => {
         supabaseUpdates.location_lat = updates.location.lat;
         supabaseUpdates.location_lng = updates.location.lng;
         supabaseUpdates.location_address = updates.location.address;
+        supabaseUpdates.condominium = updates.location.condominium;
       }
       if (updates.nearbyAttractions) supabaseUpdates.nearby_attractions = updates.nearbyAttractions;
 

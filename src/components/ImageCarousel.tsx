@@ -10,23 +10,34 @@ interface CarouselImage {
   description: string;
 }
 
-const AllImages: CarouselImage[] = [
-  { src: '/imagens/fachadamuseu.jpg', description: 'Fachada - Localizado em Casarão Museu' },
-  { src: '/imagens/Fachadafico.jpg', description: 'Fachada - Localizado em Casarão Fico' },
-  { src: '/imagens/recepcaofico.jpg', description: 'Recepção - Localizado em Casarão Fico' },
-  { src: '/imagens/academia 1.jpg', description: 'Academia - Acesso de ambos condomínios' },
-  { src: '/imagens/academia 2.jpg', description: 'Academia - Acesso de ambos condomínios' },
-  { src: '/imagens/area.jpg', description: 'Área de Lazer - Acesso de ambos condomínios' },
-  { src: '/imagens/Admin.jpg', description: 'Administração - Acesso de ambos condomínios' },
-  { src: '/imagens/bicicletario.jpg', description: 'Bicicletário - Acesso de ambos condomínios' },
-  { src: '/imagens/Coworking.jpg', description: 'Coworking - Acesso de ambos condomínios' },
-  { src: '/imagens/vista-area.jpg', description: 'Vista da Administração - Acesso de ambos condomínios' },
-  { src: '/imagens/pegpag.png', description: 'Mercado PEG&PAG - Acesso de ambos condomínios' },
+const MuseuImages: CarouselImage[] = [
+  { src: '/imagens/fachadamuseu.jpg', description: 'Fachada - Casarão Museu' },
+  { src: '/imagens/academia 1.jpg', description: 'Academia - Área comum' },
+  { src: '/imagens/academia 2.jpg', description: 'Academia - Área comum' },
+  { src: '/imagens/area.jpg', description: 'Área de Lazer - Área comum' },
+  { src: '/imagens/Admin.jpg', description: 'Administração - Área comum' },
+  { src: '/imagens/bicicletario.jpg', description: 'Bicicletário - Área comum' },
+  { src: '/imagens/Coworking.jpg', description: 'Coworking - Área comum' },
+  { src: '/imagens/vista-area.jpg', description: 'Vista da Administração - Área comum' },
+  { src: '/imagens/pegpag.png', description: 'Mercado PEG&PAG - Área comum' },
+];
+
+const FicoImages: CarouselImage[] = [
+  { src: '/imagens/Fachadafico.jpg', description: 'Fachada - Casarão Fico' },
+  { src: '/imagens/recepcaofico.jpg', description: 'Recepção - Casarão Fico' },
+  { src: '/imagens/academia 1.jpg', description: 'Academia - Área comum' },
+  { src: '/imagens/academia 2.jpg', description: 'Academia - Área comum' },
+  { src: '/imagens/area.jpg', description: 'Área de Lazer - Área comum' },
+  { src: '/imagens/Admin.jpg', description: 'Administração - Área comum' },
+  { src: '/imagens/bicicletario.jpg', description: 'Bicicletário - Área comum' },
+  { src: '/imagens/Coworking.jpg', description: 'Coworking - Área comum' },
+  { src: '/imagens/vista-area.jpg', description: 'Vista da Administração - Área comum' },
+  { src: '/imagens/pegpag.png', description: 'Mercado PEG&PAG - Área comum' },
 ];
 
 const ImageCarousel: React.FC<ImageCarouselProps> = ({ condominium }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const images = AllImages;
+  const images = condominium === 'museu' ? MuseuImages : FicoImages;
 
   const goToNext = () => {
     setCurrentImageIndex((prevIndex) =>

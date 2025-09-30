@@ -42,7 +42,7 @@ const Footer = React.forwardRef<HTMLDivElement>((_, ref) => {
               <div className="flex items-start space-x-2">
                 <MapPin className="h-4 w-4 mt-1" />
                 <span className="text-white/80">
-                  Rua do Fico, 70/71<br />
+                  Rua do Fico, 70/76<br />
                   Ipiranga, São Paulo - SP
                 </span>
               </div>

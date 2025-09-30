@@ -3,7 +3,7 @@ import { MessageCircle } from 'lucide-react';
 
 interface WhatsAppButtonProps {
   apartmentTitle?: string;
-  apartmentType?: 'fixed' | 'temporary' | 'both';
+  apartmentType?: 'fixed' | 'temporary' | 'both' | 'experience';
   customerName?: string;
 }
 

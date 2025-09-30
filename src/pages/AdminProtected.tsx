@@ -1,7 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAdminAuth } from '../hooks/useAdminAuth';
-import AdminHeader from '../components/AdminHeader';
 import Admin from './Admin';
 
 const AdminProtected: React.FC = () => {
@@ -22,12 +21,7 @@ const AdminProtected: React.FC = () => {
     return <Navigate to="/" replace />;
   }
 
-  return (
-    <>
-      <AdminHeader />
-      <Admin />
-    </>
-  );
+  return <Admin />;
 };
 
 export default AdminProtected;

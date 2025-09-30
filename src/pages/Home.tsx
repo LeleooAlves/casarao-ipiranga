@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Shield, Star, Users, ShoppingCart, Dumbbell, Briefcase, WashingMachine, ChevronDown } from 'lucide-react';
+import { MapPin, Shield, Star, Users, ShoppingCart, Dumbbell, Briefcase, WashingMachine, ChevronDown, Play, X } from 'lucide-react';
 import ImageCarousel from '../components/ImageCarousel';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 
@@ -33,30 +33,45 @@ const Home: React.FC = () => {
   const faqs = [
     {
       question: 'Qual a diferença entre moradia fixa e temporada?',
-      answer: 'Moradia fixa refere-se a aluguéis de longo prazo, geralmente com contratos anuais, para quem busca residência permanente. Moradia por temporada é para estadias curtas, como viagens a trabalho ou lazer, com contratos flexíveis e duração predeterminada.'
+      answer: 'Moradia fixa refere-se a aluguéis de longo prazo, geralmente com contratos anuais, para quem busca residência permanente. Moradia por temporada é para estadias curtas, como viagens a trabalho ou lazer, com contratos flexíveis e duração predeterminada.',
+      videoUrl: '/videos/faq1.mp4'
     },
     {
       question: 'Quais documentos preciso para alugar um apartamento para moradia fixa?',
-      answer: 'São solicitados RG, CPF, comprovante de renda (holerite ou declaração de IR), comprovante de residência. Para autônomos ou profissionais liberais, podem ser solicitados extratos bancários e declaração de imposto de renda.'
+      answer: 'São solicitados RG, CPF, comprovante de renda (holerite ou declaração de IR), comprovante de residência. Para autônomos ou profissionais liberais, podem ser solicitados extratos bancários e declaração de imposto de renda.',
+      videoUrl: '/videos/faq2.mp4'
     },
     {
       question: 'Como funciona o pagamento do aluguel?',
-      answer: 'Para moradia fixa, o pagamento é mensal, geralmente por boleto ou transferência bancária. Para temporada, o pagamento pode ser feito integralmente no ato da reserva ou em parcelas, dependendo do período e do acordo, com um sinal no momento da reserva e o restante antes do check-in.'
+      answer: 'Para moradia fixa, o pagamento é mensal, geralmente por boleto ou transferência bancária. Para temporada, o pagamento pode ser feito integralmente no ato da reserva ou em parcelas, dependendo do período e do acordo, com um sinal no momento da reserva e o restante antes do check-in.',
+      videoUrl: '/videos/faq3.mp4'
     },
     {
       question: 'Os apartamentos são mobiliados?',
-      answer: 'Não, os apartamentos para moradia fixa não são mobiliados. Os apartamentos de temporada sim, todos mobiliados.'
+      answer: 'Não, os apartamentos para moradia fixa não são mobiliados. Os apartamentos de temporada sim, todos mobiliados.',
+      videoUrl: '/videos/faq4.mp4'
     },
     {
       question: 'Posso visitar os apartamentos antes de alugar?',
-      answer: 'Sim, é possível agendar uma visita para conhecer os apartamentos de seu interesse. Entre em contato conosco pelo WhatsApp ou telefone para verificar a disponibilidade e marcar um horário.'
+      answer: 'Sim, é possível agendar uma visita para conhecer os apartamentos de seu interesse. Entre em contato conosco pelo WhatsApp ou telefone para verificar a disponibilidade e marcar um horário.',
+      videoUrl: '/videos/faq5.mp4'
     }
   ];
 
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+  const [videoModalOpen, setVideoModalOpen] = useState<string | null>(null);
+  const [selectedCondominium, setSelectedCondominium] = useState<'museu' | 'fico'>('museu');
 
   const toggleFaq = (index: number) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
+  };
+
+  const openVideoModal = (videoUrl: string) => {
+    setVideoModalOpen(videoUrl);
+  };
+
+  const closeVideoModal = () => {
+    setVideoModalOpen(null);
   };
 
   const scrollToContent = () => {
@@ -84,9 +99,9 @@ const Home: React.FC = () => {
           className="absolute inset-0"
           style={{ backgroundColor: '#e6e5df', opacity: 0.65 }}
         />
-        <div className="relative z-10 text-center text-gray-900 max-w-6xl mx-auto px-4 pt-32 overflow-x-auto">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-10 leading-tight text-gray-900 whitespace-nowrap">
-          Studios e Kitnets no bairro do Ipiranga - São Paulo
+        <div className="relative z-10 text-center text-gray-900 max-w-6xl mx-auto px-4 pt-32">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-10 leading-tight text-gray-900">
+            O maior complexo residencial de studios e kitnets do brasil
           </h1>
           <button
             onClick={scrollToContent}
@@ -126,13 +141,67 @@ const Home: React.FC = () => {
             <div>
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-gray-900">
-                  Condomínio Casarão Ipiranga
+                  Nossos Condomínios
                 </h3>
                 <p className="text-gray-600 mt-2">
                   Conheça nossas instalações e áreas comuns
                 </p>
               </div>
-              <ImageCarousel condominium="museu" />
+              
+              {/* Botões de Seleção de Condomínio */}
+              <div className="flex justify-center mb-6">
+                <div className="bg-white rounded-full p-1 shadow-md relative overflow-hidden">
+                  {/* Indicador deslizante */}
+                  <div
+                    className="absolute top-0 left-0 h-full bg-primary/10 rounded-full transition-all duration-300 ease-in-out"
+                    style={{
+                      width: '50%',
+                      transform: `translateX(${selectedCondominium === 'museu' ? '0%' : '100%'})`,
+                      zIndex: 1
+                    }}
+                  />
+                  <div className="flex space-x-1 relative z-10">
+                    <button
+                      onClick={() => setSelectedCondominium('museu')}
+                      className={`flex items-center space-x-2 px-6 py-3 rounded-full font-medium transition-all duration-300 relative ${
+                        selectedCondominium === 'museu'
+                          ? 'text-primary'
+                          : 'text-gray-600 hover:text-primary'
+                      }`}
+                      style={{ zIndex: 2 }}
+                    >
+                      <span>Casarão Museu</span>
+                    </button>
+                    <button
+                      onClick={() => setSelectedCondominium('fico')}
+                      className={`flex items-center space-x-2 px-6 py-3 rounded-full font-medium transition-all duration-300 relative ${
+                        selectedCondominium === 'fico'
+                          ? 'text-primary'
+                          : 'text-gray-600 hover:text-primary'
+                      }`}
+                      style={{ zIndex: 2 }}
+                    >
+                      <span>Casarão Fico</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Título e Descrição do Condomínio Selecionado */}
+              <div className="text-center mb-4">
+                <h4 className="text-xl font-semibold text-gray-900">
+                  {selectedCondominium === 'museu' ? 'Casarão Museu' : 'Casarão Fico'}
+                </h4>
+                <p className="text-gray-600">
+                  {selectedCondominium === 'museu' 
+                    ? 'Localizado próximo ao Museu do Ipiranga'
+                    : 'Nossa segunda unidade no bairro do Ipiranga'
+                  }
+                </p>
+              </div>
+              
+              {/* Carrossel Único */}
+              <ImageCarousel condominium={selectedCondominium} />
             </div>
           </div>
         </div>
@@ -187,7 +256,7 @@ const Home: React.FC = () => {
               <div key={index} className="bg-white rounded-lg shadow-md p-6">
                 <button
                   onClick={() => toggleFaq(index)}
-                  className="w-full flex justify-between items-center text-left"
+                  className="w-full flex justify-between items-center text-left mb-4"
                 >
                   <h3 className="text-lg font-semibold text-gray-900 pr-4">
                     {faq.question}
@@ -196,16 +265,64 @@ const Home: React.FC = () => {
                     className={`h-5 w-5 text-gray-500 transform transition-transform duration-300 ${openFaqIndex === index ? 'rotate-180' : ''}`}
                   />
                 </button>
+                
                 {openFaqIndex === index && (
-                  <p className="text-gray-700 leading-relaxed mt-2">
-                    {faq.answer}
-                  </p>
+                  <div className="space-y-4">
+                    <p className="text-gray-700 leading-relaxed">
+                      {faq.answer}
+                    </p>
+                    
+                    {/* Preview do Vídeo */}
+                    <div className="bg-gray-100 rounded-lg overflow-hidden">
+                      <div 
+                        className="relative aspect-video bg-gray-200 cursor-pointer group hover:bg-gray-300 transition-colors"
+                        onClick={() => openVideoModal(faq.videoUrl)}
+                      >
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="bg-black bg-opacity-60 rounded-full p-4 group-hover:bg-opacity-80 transition-all">
+                            <Play className="h-8 w-8 text-white" />
+                          </div>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                          <p className="text-white text-sm font-medium">
+                            Clique para assistir a explicação em vídeo
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             ))}
           </div>
         </div>
       </section>
+      
+      {/* Modal de Vídeo */}
+      {videoModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="relative bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <button
+              onClick={closeVideoModal}
+              className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white rounded-full p-2 hover:bg-opacity-75 transition-colors"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            <video
+              src={videoModalOpen}
+              controls
+              autoPlay
+              className="w-full h-auto max-h-[80vh]"
+              onError={() => {
+                console.error('Erro ao carregar vídeo:', videoModalOpen);
+              }}
+            >
+              Seu navegador não suporta a reprodução de vídeos.
+            </video>
+          </div>
+        </div>
+      )}
+      
       <ScrollToTopButton />
     </div>
   );

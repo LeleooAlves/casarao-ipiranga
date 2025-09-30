@@ -13,12 +13,13 @@ export interface Apartment {
   size: number;
   bedrooms: number;
   bathrooms: number;
-  type: 'fixed' | 'temporary' | 'both';
+  type: 'fixed' | 'temporary' | 'both' | 'experience';
   available: boolean;
   location: {
     lat: number;
     lng: number;
     address: string;
+    condominium: 'casarao-museu' | 'casarao-fico';
   };
   nearbyAttractions: {
     name: string;

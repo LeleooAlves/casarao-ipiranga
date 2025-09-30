@@ -1,16 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, MapPin, Bed, Bath, Square, ChevronLeft, ChevronRight, X, Phone, Mail } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Bed, 
+  Bath, 
+  Square, 
+  MapPin, 
+  Phone,
+  Mail,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Play
+} from 'lucide-react';
 import { useApartments } from '../hooks/useApartments';
 import { useApartmentStats } from '../hooks/useApartmentStats';
-import { useUserInterests } from '../hooks/useUserInterests';
 import WhatsAppButton from '../components/WhatsAppButton';
 
 const ApartmentDetails: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const { getApartmentBySlug } = useApartments();
   const { incrementMessages } = useApartmentStats();
-  const { addInterest } = useUserInterests();
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedTab, setSelectedTab] = useState('overview');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,8 +58,14 @@ const ApartmentDetails: React.FC = () => {
     );
   }
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(price);
+  };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -95,14 +111,6 @@ const ApartmentDetails: React.FC = () => {
 
     // Registrar mensagem enviada
     await incrementMessages(apartment.id);
-
-    // Registrar interesse do usuário
-    await addInterest(
-      apartment.id,
-      formData.name,
-      apartment.title,
-      apartment.available
-    );
 
     window.open(whatsappUrl, '_blank');
 
@@ -153,10 +161,11 @@ const ApartmentDetails: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-8 pb-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Link
-          to="/catalog"
+    <div className="min-h-screen bg-gray-50 pt-32">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Breadcrumb */}
+        <Link 
+          to="/catalog" 
           className="inline-flex items-center text-primary hover:text-primary/80 mb-6 border border-primary rounded-md px-3 py-2 hover:bg-primary/5 transition-colors duration-200 cursor-pointer select-none"
           style={{ minHeight: '40px', display: 'flex', alignItems: 'center' }}
         >
@@ -192,48 +201,6 @@ const ApartmentDetails: React.FC = () => {
                       />
                     )}
                   </div>
-
-                  {/* Navigation Arrows */}
-                  {apartment.available && mediaItems.length > 1 && (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          prevCarousel();
-                        }}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <ChevronLeft className="h-6 w-6" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          nextCarousel();
-                        }}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <ChevronRight className="h-6 w-6" />
-                      </button>
-                    </>
-                  )}
-
-                  {/* Indicators */}
-                  {apartment.available && mediaItems.length > 1 && (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
-                      {mediaItems.map((_, index) => (
-                        <button
-                          key={index}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedImage(index);
-                          }}
-                          className={`w-3 h-3 rounded-full transition-colors ${
-                            selectedImage === index ? 'bg-white' : 'bg-white/50'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="h-96 bg-gray-100 flex items-center justify-center">
@@ -271,50 +238,122 @@ const ApartmentDetails: React.FC = () => {
                   </div>
                 </div>
               )}
+
+                {/* Navigation Arrows */}
+                {apartment.available && mediaItems.length > 1 && (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        prevCarousel();
+                      }}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <ChevronLeft className="h-6 w-6" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        nextCarousel();
+                      }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <ChevronRight className="h-6 w-6" />
+                    </button>
+                  </>
+                )}
+
+                {/* Indicators */}
+                {apartment.available && mediaItems.length > 1 && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+                    {mediaItems.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedImage(index);
+                        }}
+                        className={`w-3 h-3 rounded-full transition-colors ${
+                          selectedImage === index ? 'bg-white' : 'bg-white/50'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Thumbnail Strip */}
+              <div className="p-4">
+                <div className="flex space-x-2 overflow-x-auto">
+                  {apartment.images.map((image, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImage(index)}
+                      className={`flex-shrink-0 w-20 h-20 rounded-md overflow-hidden border-2 ${
+                        selectedImage === index ? 'border-primary' : 'border-gray-200'
+                      }`}
+                    >
+                      <img
+                        src={image}
+                        alt={`${apartment.title} - ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                  {apartment.video && (
+                    <button
+                      onClick={() => setSelectedImage(apartment.images.length)}
+                      className={`flex-shrink-0 w-20 h-20 rounded-md overflow-hidden border-2 bg-black flex items-center justify-center ${
+                        selectedImage === apartment.images.length ? 'border-primary' : 'border-gray-200'
+                      }`}
+                    >
+                      <Play className="h-6 w-6 text-white" />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Apartment Info */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h1 className="text-3xl font-bold text-gray-900">{apartment.title}</h1>
-                <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  apartment.available 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {apartment.available ? 'Disponível' : 'Alugado'}
+              <div className="flex flex-col sm:flex-row justify-between items-start mb-4">
+                <div className="w-full sm:w-auto mb-4 sm:mb-0">
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">{apartment.title}</h1>
+                  <div className="flex items-center text-gray-600">
+                    <MapPin className="h-4 w-4 mr-1" />
+                    <span>{apartment.location.address}</span>
+                  </div>
+                </div>
+                <div className="w-full sm:w-auto text-right">
+                  <div className="text-2xl font-bold text-primary">
+                    {formatPrice(apartment.price.monthly)}/mês
+                  </div>
+                  {apartment.type !== 'fixed' && (
+                    <div className="text-gray-600">
+                      {formatPrice(apartment.price.daily)}/dia
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-center text-gray-600 mb-4">
-                <MapPin className="h-5 w-5 mr-2" />
-                <span>{apartment.location.address}</span>
-              </div>
-
-              <div className="flex items-center space-x-6 mb-6">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-4 mb-6 sm:space-x-6">
                 <div className="flex items-center">
-                  <Bed className="h-5 w-5 text-gray-400 mr-2" />
-                  <span className="text-gray-700">{apartment.bedrooms} quartos</span>
+                  <Bed className="h-5 w-5 mr-2 text-gray-500" />
+                  <span>{apartment.bedrooms} quartos</span>
                 </div>
                 <div className="flex items-center">
-                  <Bath className="h-5 w-5 text-gray-400 mr-2" />
-                  <span className="text-gray-700">{apartment.bathrooms} banheiros</span>
+                  <Bath className="h-5 w-5 mr-2 text-gray-500" />
+                  <span>{apartment.bathrooms} banheiros</span>
                 </div>
                 <div className="flex items-center">
-                  <Square className="h-5 w-5 text-gray-400 mr-2" />
-                  <span className="text-gray-700">{apartment.size}m²</span>
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <div className="text-2xl font-bold text-primary mb-2">
-                  Valores a consultar
+                  <Square className="h-5 w-5 mr-2 text-gray-500" />
+                  <span>{apartment.size}m²</span>
                 </div>
               </div>
 
               {/* Tabs */}
               <div className="border-b border-gray-200 mb-6">
-                <nav className="-mb-px flex space-x-8">
+                <nav className="flex flex-wrap gap-x-4 sm:space-x-8">
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
@@ -343,10 +382,10 @@ const ApartmentDetails: React.FC = () => {
                 {selectedTab === 'amenities' && (
                   <div>
                     <h3 className="text-lg font-semibold mb-3">Comodidades</h3>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {apartment.amenities.map((amenity, index) => (
-                        <div key={index} className="flex items-center">
-                          <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
+                        <div key={index} className="flex items-center space-x-2">
+                          <div className="w-2 h-2 bg-primary rounded-full"></div>
                           <span className="text-gray-700">{amenity}</span>
                         </div>
                       ))}
@@ -356,27 +395,18 @@ const ApartmentDetails: React.FC = () => {
 
                 {selectedTab === 'location' && (
                   <div>
-                    <h3 className="text-lg font-semibold mb-3">Localização e Atrações Próximas</h3>
-                    <div className="mb-4">
-                      <div className="flex items-center text-gray-600 mb-2">
-                        <MapPin className="h-5 w-5 mr-2" />
-                        <span>{apartment.location.address}</span>
-                      </div>
-                    </div>
-                    
-                    {apartment.nearbyAttractions && apartment.nearbyAttractions.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-3">Atrações Próximas</h4>
-                        <div className="grid grid-cols-1 gap-2">
-                          {apartment.nearbyAttractions.map((attraction, index) => (
-                            <div key={index} className="flex items-center">
-                              <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-                              <span className="text-gray-700">{attraction.name} - {attraction.distance}</span>
-                            </div>
-                          ))}
+                    <h3 className="text-lg font-semibold mb-3">Localização e Pontos de Interesse</h3>
+                    <div className="space-y-3">
+                      {apartment.nearbyAttractions.map((attraction, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <span className="font-medium text-gray-900">{attraction.name}</span>
+                            <span className="text-sm text-gray-500 ml-2">({attraction.type})</span>
+                          </div>
+                          <span className="text-primary font-medium">{attraction.distance}</span>
                         </div>
-                      </div>
-                    )}
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -423,11 +453,12 @@ const ApartmentDetails: React.FC = () => {
                   />
                 </div>
 
-                {(apartment.type === 'temporary' || apartment.type === 'both' || apartment.type === 'experience') && (
+                {/* Check-in e Check-out condicional */}
+                {(apartment.type === 'temporary' || apartment.type === 'both') && (
                   <>
-                    <div>
-                      <label htmlFor="checkIn" className="block text-sm font-medium text-gray-700 mb-1">
-                        {apartment.type === 'experience' ? 'Data da Experiência' : 'Check-in'}
+                    <div className="mb-4">
+                      <label htmlFor="checkIn" className="block text-sm font-medium text-gray-700 mb-2">
+                        Check-in (opcional)
                       </label>
                       <input
                         type="date"
@@ -438,21 +469,19 @@ const ApartmentDetails: React.FC = () => {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                       />
                     </div>
-                    {apartment.type !== 'experience' && (
-                      <div>
-                        <label htmlFor="checkOut" className="block text-sm font-medium text-gray-700 mb-1">
-                          Check-out
-                        </label>
-                        <input
-                          type="date"
-                          id="checkOut"
-                          name="checkOut"
-                          value={formData.checkOut}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                        />
-                      </div>
-                    )}
+                    <div className="mb-4">
+                      <label htmlFor="checkOut" className="block text-sm font-medium text-gray-700 mb-2">
+                        Check-out (opcional)
+                      </label>
+                      <input
+                        type="date"
+                        id="checkOut"
+                        name="checkOut"
+                        value={formData.checkOut}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      />
+                    </div>
                   </>
                 )}
 

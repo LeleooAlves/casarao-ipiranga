@@ -49,11 +49,12 @@ export type Database = {
           size: number;
           bedrooms: number;
           bathrooms: number;
-          type: 'fixed' | 'temporary' | 'both';
+          type: 'fixed' | 'temporary' | 'both' | 'experience';
           available: boolean;
           location_lat: number;
           location_lng: number;
           location_address: string;
+          condominium: 'casarao-museu' | 'casarao-fico';
           nearby_attractions: Array<{
             name: string;
             distance: string;
@@ -75,11 +76,12 @@ export type Database = {
           size: number;
           bedrooms: number;
           bathrooms: number;
-          type: 'fixed' | 'temporary' | 'both';
+          type: 'fixed' | 'temporary' | 'both' | 'experience';
           available?: boolean;
           location_lat: number;
           location_lng: number;
           location_address: string;
+          condominium: 'casarao-museu' | 'casarao-fico';
           nearby_attractions: Array<{
             name: string;
             distance: string;
@@ -104,11 +106,57 @@ export type Database = {
           location_lat?: number;
           location_lng?: number;
           location_address?: string;
-          nearby_attractions?: Array<{
-            name: string;
-            distance: string;
-            type: string;
-          }>;
+          condominium?: 'casarao-museu' | 'casarao-fico';
+        };
+      };
+      apartment_stats: {
+        Row: {
+          id: string;
+          apartment_id: string | null;
+          views: number | null;
+          messages: number | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          apartment_id?: string | null;
+          views?: number | null;
+          messages?: number | null;
+        };
+        Update: {
+          id?: string;
+          apartment_id?: string | null;
+          views?: number | null;
+          messages?: number | null;
+        };
+      };
+      user_interests: {
+        Row: {
+          id: string;
+          apartment_id: string;
+          user_name: string;
+          user_type: 'available' | 'rented';
+          apartment_title: string;
+          apartment_available: boolean;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          apartment_id: string;
+          user_name: string;
+          user_type: 'available' | 'rented';
+          apartment_title: string;
+          apartment_available: boolean;
+        };
+        Update: {
+          id?: string;
+          apartment_id?: string;
+          user_name?: string;
+          user_type?: 'available' | 'rented';
+          apartment_title?: string;
+          apartment_available?: boolean;
         };
       };
     };
