@@ -40,8 +40,8 @@ const Catalog: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
         {/* Category Tabs */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-white rounded-full p-1 shadow-md relative overflow-hidden">
+        <div className="flex justify-center mb-6 sm:mb-8 px-4 sm:px-0">
+          <div className="bg-white rounded-full p-1 shadow-md relative overflow-hidden w-full sm:w-auto max-w-md sm:max-w-none">
             {/* Indicador deslizante */}
             <div
               className="absolute top-0 left-0 h-full bg-primary/10 rounded-full transition-all duration-300 ease-in-out"
@@ -57,39 +57,41 @@ const Catalog: React.FC = () => {
             <div className="flex space-x-1 relative z-10">
               <button
                 onClick={() => setSelectedCategory('fixed')}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-full font-medium transition-all duration-300 relative ${
+                className={`flex items-center justify-center space-x-1 sm:space-x-2 px-3 sm:px-6 py-2 sm:py-3 rounded-full font-medium transition-all duration-300 relative text-xs sm:text-sm flex-1 sm:flex-none ${
                   selectedCategory === 'fixed'
                     ? 'text-primary'
                     : 'text-gray-600 hover:text-primary'
                 }`}
                 style={{ zIndex: 2 }}
               >
-                <Home className="h-4 w-4" />
-                <span>Moradia Fixa</span>
+                <Home className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline sm:inline">Moradia Fixa</span>
+                <span className="xs:hidden sm:hidden">Fixa</span>
               </button>
               <button
                 onClick={() => setSelectedCategory('temporary')}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-full font-medium transition-all duration-300 relative ${
+                className={`flex items-center justify-center space-x-1 sm:space-x-2 px-3 sm:px-6 py-2 sm:py-3 rounded-full font-medium transition-all duration-300 relative text-xs sm:text-sm flex-1 sm:flex-none ${
                   selectedCategory === 'temporary'
                     ? 'text-primary'
                     : 'text-gray-600 hover:text-primary'
                 }`}
                 style={{ zIndex: 2 }}
               >
-                <Calendar className="h-4 w-4" />
+                <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span>Temporada</span>
               </button>
               <button
                 onClick={() => setSelectedCategory('experience')}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-full font-medium transition-all duration-300 relative ${
+                className={`flex items-center justify-center space-x-1 sm:space-x-2 px-3 sm:px-6 py-2 sm:py-3 rounded-full font-medium transition-all duration-300 relative text-xs sm:text-sm flex-1 sm:flex-none ${
                   selectedCategory === 'experience'
                     ? 'text-primary'
                     : 'text-gray-600 hover:text-primary'
                 }`}
                 style={{ zIndex: 2 }}
               >
-                <Star className="h-4 w-4" />
-                <span>Experiências</span>
+                <Star className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline sm:inline">Experiências</span>
+                <span className="xs:hidden sm:hidden">Exp</span>
               </button>
             </div>
           </div>
@@ -101,7 +103,7 @@ const Catalog: React.FC = () => {
           
 
           {/* Results */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             {isLoading ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -109,19 +111,21 @@ const Catalog: React.FC = () => {
               </div>
             ) : filteredApartments.length > 0 ? (
               <>
-                <div className="flex items-center mb-6">
-                  {selectedCategory === 'fixed' ? (
-                    <Home className="h-6 w-6 text-primary mr-2" />
-                  ) : selectedCategory === 'temporary' ? (
-                    <Calendar className="h-6 w-6 text-primary mr-2" />
-                  ) : (
-                    <Star className="h-6 w-6 text-yellow-600 mr-2" />
-                  )}
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    {selectedCategory === 'fixed' ? 'Moradia Fixa' : 
-                     selectedCategory === 'temporary' ? 'Temporada' : 'Experiências Únicas'}
-                  </h2>
-                  <span className={`ml-3 px-3 py-1 rounded-full text-sm font-medium ${
+                <div className="flex flex-col sm:flex-row sm:items-center mb-4 sm:mb-6 gap-2 sm:gap-0">
+                  <div className="flex items-center">
+                    {selectedCategory === 'fixed' ? (
+                      <Home className="h-5 w-5 sm:h-6 sm:w-6 text-primary mr-2" />
+                    ) : selectedCategory === 'temporary' ? (
+                      <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-primary mr-2" />
+                    ) : (
+                      <Star className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-600 mr-2" />
+                    )}
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+                      {selectedCategory === 'fixed' ? 'Moradia Fixa' : 
+                       selectedCategory === 'temporary' ? 'Temporada' : 'Experiências Únicas'}
+                    </h2>
+                  </div>
+                  <span className={`sm:ml-3 px-3 py-1 rounded-full text-xs sm:text-sm font-medium self-start sm:self-auto ${
                     selectedCategory === 'experience' 
                       ? 'bg-yellow-100 text-yellow-800' 
                       : 'bg-primary/10 text-primary'
@@ -129,7 +133,7 @@ const Catalog: React.FC = () => {
                     {filteredApartments.length} {selectedCategory === 'experience' ? 'experiência' : 'apartamento'}{filteredApartments.length !== 1 ? 's' : ''}
                   </span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {filteredApartments.map((apartment) => (
                     <ApartmentCard 
                       key={apartment.id} 

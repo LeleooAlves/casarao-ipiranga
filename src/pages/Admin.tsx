@@ -3,7 +3,7 @@ import { useApartments } from '../hooks/useApartments';
 import { useApartmentStats } from '../hooks/useApartmentStats';
 import { useUserInterests } from '../hooks/useUserInterests';
 import { useFileUpload } from '../hooks/useFileUpload';
-import { Plus, Trash2, X, Home, Calendar, Edit, ToggleLeft, ToggleRight, BarChart3, List, Menu, MessageCircle, Eye, Star, LogOut } from 'lucide-react';
+import { Plus, Trash2, X, Home, Calendar, Edit, ToggleLeft, ToggleRight, BarChart3, List, MessageCircle, Eye, Star, LogOut } from 'lucide-react';
 
 const Admin: React.FC = () => {
   const { apartments, addApartment, updateApartment, deleteApartment, clearAllApartments, isLoading } = useApartments();
@@ -170,21 +170,6 @@ const Admin: React.FC = () => {
     setApartmentVideo(null);
   };
 
-  // Função para abrir o seletor de imagens programaticamente
-  const openImageSelector = () => {
-    const input = document.getElementById('image-upload') as HTMLInputElement;
-    if (input) {
-      input.click();
-    }
-  };
-
-  // Função para abrir o seletor de vídeo programaticamente
-  const openVideoSelector = () => {
-    const input = document.getElementById('video-upload') as HTMLInputElement;
-    if (input) {
-      input.click();
-    }
-  };
 
   const resetForm = () => {
     setApartmentForm({
@@ -297,27 +282,49 @@ const Admin: React.FC = () => {
         style={{ backgroundColor: '#e6e5df', opacity: 0.65 }}
       />
       <div className="relative z-10">
-        <div className="flex min-h-screen">
+        <div className="flex h-screen overflow-hidden">
+          {/* Overlay para mobile quando sidebar está aberta */}
+          {sidebarOpen && (
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+          
           {/* Sidebar */}
-          <div className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white shadow-lg transition-all duration-300 flex-shrink-0 flex flex-col`}>
+          <div className={`${sidebarOpen ? 'w-64' : 'w-16'} ${sidebarOpen ? 'fixed md:relative' : 'relative'} ${sidebarOpen ? 'z-50 md:z-auto' : ''} bg-white shadow-lg transition-all duration-300 flex-shrink-0 flex flex-col h-full`}>
             <div className="p-4 flex-1">
-              {/* Header da Sidebar com Logo */}
-              <div className={`flex items-center mb-6 ${sidebarOpen ? 'justify-between' : 'flex-col space-y-3'}`}>
+              {/* Header da Sidebar com Logo Interativa */}
+              <div className={`flex items-center mb-6 ${sidebarOpen ? 'justify-start' : 'justify-center'}`}>
                 <button
                   onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="relative p-2 rounded-lg hover:bg-gray-100 hover:shadow-md transition-all duration-300 group transform hover:scale-105"
                 >
-                  <Menu className="h-5 w-5" />
+                  {/* Logo */}
+                  <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${
+                    sidebarOpen ? 'opacity-0 scale-75 rotate-180' : 'opacity-100 scale-100 rotate-0'
+                  }`}>
+                    <img 
+                      src="/logo/Arvore.jpg" 
+                      alt="Logo Casarão" 
+                      className="h-8 w-8 rounded-full object-cover"
+                    />
+                  </div>
+                  
+                  {/* Ícone X */}
+                  <div className={`flex items-center justify-center transition-all duration-300 ${
+                    sidebarOpen ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-75 rotate-180'
+                  }`}>
+                    <X className="h-6 w-6 text-gray-600" />
+                  </div>
                 </button>
                 
-                <div className={`flex items-center ${sidebarOpen ? 'ml-3' : ''}`}>
-                  <img 
-                    src="/logo/Arvore.jpg" 
-                    alt="Logo Casarão" 
-                    className="h-8 w-8 rounded-full object-cover"
-                  />
+                {/* Texto Admin quando sidebar aberta */}
+                <div className={`ml-3 transition-all duration-300 ${
+                  sidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'
+                }`}>
                   {sidebarOpen && (
-                    <span className="ml-2 text-sm font-semibold text-gray-800">Admin</span>
+                    <span className="text-sm font-semibold text-gray-800">Admin</span>
                   )}
                 </div>
               </div>
@@ -377,80 +384,81 @@ const Admin: React.FC = () => {
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 p-6">
-            <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-3 sm:p-6">
+              <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 lg:p-8">
             {activeTab === 'dashboard' && (
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Dashboard</h2>
                 
                 {/* Cards de Estatísticas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 sm:p-6 text-white">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-blue-100 text-sm">Total de Apartamentos</p>
-                        <p className="text-2xl font-bold">{apartments.length}</p>
+                        <p className="text-blue-100 text-xs sm:text-sm">Total de Apartamentos</p>
+                        <p className="text-xl sm:text-2xl font-bold">{apartments.length}</p>
                       </div>
-                      <Home className="h-8 w-8 text-blue-200" />
+                      <Home className="h-6 w-6 sm:h-8 sm:w-8 text-blue-200" />
                     </div>
                   </div>
                   
-                  <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
+                  <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 sm:p-6 text-white">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-green-100 text-sm">Apartamentos Disponíveis</p>
-                        <p className="text-2xl font-bold">{apartments.filter(apt => apt.available).length}</p>
+                        <p className="text-green-100 text-xs sm:text-sm">Apartamentos Disponíveis</p>
+                        <p className="text-xl sm:text-2xl font-bold">{apartments.filter(apt => apt.available).length}</p>
                       </div>
-                      <ToggleRight className="h-8 w-8 text-green-200" />
+                      <ToggleRight className="h-6 w-6 sm:h-8 sm:w-8 text-green-200" />
                     </div>
                   </div>
                   
-                  <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg p-6 text-white">
+                  <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg p-4 sm:p-6 text-white">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-red-100 text-sm">Apartamentos Alugados</p>
-                        <p className="text-2xl font-bold">{apartments.filter(apt => !apt.available).length}</p>
+                        <p className="text-red-100 text-xs sm:text-sm">Apartamentos Alugados</p>
+                        <p className="text-xl sm:text-2xl font-bold">{apartments.filter(apt => !apt.available).length}</p>
                       </div>
-                      <ToggleLeft className="h-8 w-8 text-red-200" />
+                      <ToggleLeft className="h-6 w-6 sm:h-8 sm:w-8 text-red-200" />
                     </div>
                   </div>
                   
-                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-4 sm:p-6 text-white">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-purple-100 text-sm">Total de Visualizações</p>
-                        <p className="text-2xl font-bold">{stats.totalViews}</p>
+                        <p className="text-purple-100 text-xs sm:text-sm">Total de Visualizações</p>
+                        <p className="text-xl sm:text-2xl font-bold">{stats.totalViews}</p>
                       </div>
-                      <Eye className="h-8 w-8 text-purple-200" />
+                      <Eye className="h-6 w-6 sm:h-8 sm:w-8 text-purple-200" />
                     </div>
                   </div>
                   
-                  <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-6 text-white">
+                  <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-4 sm:p-6 text-white">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-orange-100 text-sm">Interesse em Disponíveis</p>
-                        <p className="text-2xl font-bold">{getInterestsCount().available}</p>
+                        <p className="text-orange-100 text-xs sm:text-sm">Interesse em Disponíveis</p>
+                        <p className="text-xl sm:text-2xl font-bold">{getInterestsCount().available}</p>
                       </div>
-                      <Star className="h-8 w-8 text-orange-200" />
+                      <Star className="h-6 w-6 sm:h-8 sm:w-8 text-orange-200" />
                     </div>
                   </div>
                   
-                  <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg p-6 text-white">
+                  <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg p-4 sm:p-6 text-white">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-yellow-100 text-sm">Interesse em Alugados</p>
-                        <p className="text-2xl font-bold">{getInterestsCount().rented}</p>
+                        <p className="text-yellow-100 text-xs sm:text-sm">Interesse em Alugados</p>
+                        <p className="text-xl sm:text-2xl font-bold">{getInterestsCount().rented}</p>
                       </div>
-                      <MessageCircle className="h-8 w-8 text-yellow-200" />
+                      <MessageCircle className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-200" />
                     </div>
                   </div>
                 </div>
                 
                 {/* Estatísticas por Apartamento */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                      <Eye className="h-5 w-5 mr-2" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="bg-gray-50 rounded-lg p-4 sm:p-6">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
+                      <Eye className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                       Visualizações por Apartamento
                     </h3>
                     <div className="space-y-3">
@@ -470,9 +478,9 @@ const Admin: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                      <MessageCircle className="h-5 w-5 mr-2" />
+                  <div className="bg-gray-50 rounded-lg p-4 sm:p-6">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
+                      <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                       Mensagens por Apartamento
                     </h3>
                     <div className="space-y-3">
@@ -552,15 +560,16 @@ const Admin: React.FC = () => {
 
             {activeTab === 'list' && (
               <div>
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-4">
-                    <h2 className="text-2xl font-bold text-gray-900">Apartamentos</h2>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Apartamentos</h2>
                     <button
                       onClick={() => setAddApartmentModal(true)}
-                      className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                      className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm sm:text-base"
                     >
                       <Plus className="h-4 w-4" />
-                      Adicionar Apartamento
+                      <span className="hidden sm:inline">Adicionar Apartamento</span>
+                      <span className="sm:hidden">Adicionar</span>
                     </button>
                   </div>
                   {apartments.length > 0 && (
@@ -574,8 +583,8 @@ const Admin: React.FC = () => {
                 </div>
 
                 {/* Sub-abas para tipos de apartamento */}
-                <div className="flex justify-center mb-8">
-                  <div className="bg-white rounded-full p-1 shadow-md relative overflow-hidden">
+                <div className="flex justify-center mb-6 sm:mb-8 px-2 sm:px-0">
+                  <div className="bg-white rounded-full p-1 shadow-md relative overflow-hidden w-full sm:w-auto">
                     {/* Indicador deslizante */}
                     <div
                       className="absolute top-0 left-0 h-full bg-primary/10 rounded-full transition-all duration-300 ease-in-out"
@@ -591,39 +600,41 @@ const Admin: React.FC = () => {
                     <div className="flex space-x-1 relative z-10">
                       <button
                         onClick={() => setApartmentSubTab('fixed')}
-                        className={`flex items-center space-x-2 px-6 py-3 rounded-full font-medium transition-all duration-300 relative ${
+                        className={`flex items-center justify-center space-x-1 sm:space-x-2 px-3 sm:px-6 py-2 sm:py-3 rounded-full font-medium transition-all duration-300 relative text-xs sm:text-sm flex-1 sm:flex-none ${
                           apartmentSubTab === 'fixed'
                             ? 'text-primary'
                             : 'text-gray-600 hover:text-primary'
                         }`}
                         style={{ zIndex: 2 }}
                       >
-                        <Home className="h-4 w-4" />
-                        <span>Moradia Fixa</span>
+                        <Home className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden xs:inline sm:inline">Moradia Fixa</span>
+                        <span className="xs:hidden sm:hidden">Fixa</span>
                       </button>
                       <button
                         onClick={() => setApartmentSubTab('temporary')}
-                        className={`flex items-center space-x-2 px-6 py-3 rounded-full font-medium transition-all duration-300 relative ${
+                        className={`flex items-center justify-center space-x-1 sm:space-x-2 px-3 sm:px-6 py-2 sm:py-3 rounded-full font-medium transition-all duration-300 relative text-xs sm:text-sm flex-1 sm:flex-none ${
                           apartmentSubTab === 'temporary'
                             ? 'text-primary'
                             : 'text-gray-600 hover:text-primary'
                         }`}
                         style={{ zIndex: 2 }}
                       >
-                        <Calendar className="h-4 w-4" />
+                        <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
                         <span>Temporada</span>
                       </button>
                       <button
                         onClick={() => setApartmentSubTab('experience')}
-                        className={`flex items-center space-x-2 px-6 py-3 rounded-full font-medium transition-all duration-300 relative ${
+                        className={`flex items-center justify-center space-x-1 sm:space-x-2 px-3 sm:px-6 py-2 sm:py-3 rounded-full font-medium transition-all duration-300 relative text-xs sm:text-sm flex-1 sm:flex-none ${
                           apartmentSubTab === 'experience'
                             ? 'text-primary'
                             : 'text-gray-600 hover:text-primary'
                         }`}
                         style={{ zIndex: 2 }}
                       >
-                        <Star className="h-4 w-4" />
-                        <span>Experiências</span>
+                        <Star className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden xs:inline sm:inline">Experiências</span>
+                        <span className="xs:hidden sm:hidden">Exp</span>
                       </button>
                     </div>
                   </div>
@@ -785,6 +796,7 @@ const Admin: React.FC = () => {
               </div>
             )}
             </div>
+            </div>
           </div>
         </div>
       </div>
@@ -900,10 +912,10 @@ const Admin: React.FC = () => {
 
       {/* Modal de Adicionar Apartamento */}
       {addApartmentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
-              <h3 className="text-xl font-semibold text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
                 Adicionar Novo Apartamento
               </h3>
               <button
@@ -917,10 +929,10 @@ const Admin: React.FC = () => {
               </button>
             </div>
             
-            <div className="overflow-y-auto flex-1 p-6">
-              <form onSubmit={handleSubmitApartment} className="space-y-6">
+            <div className="overflow-y-auto flex-1 p-4 sm:p-6">
+              <form onSubmit={handleSubmitApartment} className="space-y-4 sm:space-y-6">
                 {/* Informações Básicas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Título do Apartamento
@@ -971,7 +983,7 @@ const Admin: React.FC = () => {
                 </div>
 
                 {/* Detalhes do Apartamento */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Tamanho (m²)
@@ -1044,7 +1056,7 @@ const Admin: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Comodidades
                   </label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                     {[
                       'Wi-Fi', 'Ar Condicionado', 'TV', 'Cozinha Equipada', 
                       'Máquina de Lavar', 'Estacionamento', 'Piscina', 'Academia',
@@ -1211,22 +1223,23 @@ const Admin: React.FC = () => {
             </div>
 
             {/* Botões de Ação */}
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 flex-shrink-0 bg-white">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-gray-200 flex-shrink-0 bg-white">
               <button
                 onClick={() => {
                   resetForm();
                   setAddApartmentModal(false);
                 }}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors order-2 sm:order-1"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
               >
-                {isSubmitting ? 'Adicionando...' : 'Adicionar Apartamento'}
+                <span className="hidden sm:inline">{isSubmitting ? 'Adicionando...' : 'Adicionar Apartamento'}</span>
+                <span className="sm:hidden">{isSubmitting ? 'Adicionando...' : 'Adicionar'}</span>
               </button>
             </div>
           </div>
