@@ -11,7 +11,7 @@ const Home: React.FC = () => {
   const features = [
     {
       icon: MapPin,
-      title: 'Localização Privilegiada',
+      title: 'Localização Privilegiada!!',
       description: 'No coração de São Paulo, próximo aos principais pontos turísticos e comerciais.',
     },
     {
