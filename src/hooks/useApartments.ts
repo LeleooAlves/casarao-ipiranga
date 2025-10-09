@@ -11,6 +11,30 @@ export const useApartments = () => {
 
   useEffect(() => {
     loadApartments();
+
+    // Configurar subscription para atualizações em tempo real
+    const apartmentsChannel = supabase
+      .channel('apartments-realtime')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'apartments' },
+        () => {
+          console.log('Apartamentos alterados - recarregando lista');
+          loadApartments();
+        }
+      )
+      .subscribe();
+
+    // Configurar polling a cada 2 segundos como backup
+    const pollingInterval = setInterval(() => {
+      console.log('Polling: Atualizando apartamentos automaticamente');
+      loadApartments();
+    }, 2000); // 2 segundos
+
+    // Cleanup function
+    return () => {
+      supabase.removeChannel(apartmentsChannel);
+      clearInterval(pollingInterval);
+    };
   }, []);
 
   const loadApartments = async () => {

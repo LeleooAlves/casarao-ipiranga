@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { useApartments } from '../hooks/useApartments';
-import { useApartmentStats } from '../hooks/useApartmentStats';
+import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useUserInterests } from '../hooks/useUserInterests';
 import { useFileUpload } from '../hooks/useFileUpload';
+import { useFaqVideos } from '../hooks/useFaqVideos';
+import { faqs } from '../data/faq';
 import { Plus, Trash2, X, Home, Calendar, Edit, ToggleLeft, ToggleRight, BarChart3, List, MessageCircle, Eye, Star, LogOut } from 'lucide-react';
 
 const Admin: React.FC = () => {
   const { apartments, addApartment, updateApartment, deleteApartment, clearAllApartments, isLoading } = useApartments();
-  const { stats } = useApartmentStats();
+  const { stats: dashboardStats, apartmentAnalytics, refreshStats } = useDashboardStats();
   const { getInterestsCount, getApartmentsWithInterests } = useUserInterests();
   const { uploadImages, uploadVideo } = useFileUpload();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'list' | 'edit'>('dashboard');
+  const { videos: faqVideos, addVideo: addFaqVideo, updateVideo: updateFaqVideo, deleteVideo: deleteFaqVideo, toggleVideoStatus } = useFaqVideos();
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'list' | 'edit' | 'faq'>('dashboard');
   const [apartmentSubTab, setApartmentSubTab] = useState<'fixed' | 'temporary' | 'experience'>('fixed');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [editingApartment, setEditingApartment] = useState<string | null>(null);
@@ -54,10 +57,199 @@ const Admin: React.FC = () => {
   const [apartmentImages, setApartmentImages] = useState<File[]>([]);
   const [apartmentVideo, setApartmentVideo] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Estado para popup personalizado
+  const [popup, setPopup] = useState<{
+    isOpen: boolean;
+    type: 'success' | 'error' | 'info';
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    type: 'info',
+    title: '',
+    message: ''
+  });
+
+  // Estados para o formulário de editar apartamento
+  const [editForm, setEditForm] = useState({
+    title: '',
+    type: 'fixed' as 'fixed' | 'temporary' | 'both' | 'experience',
+    description: '',
+    size: '',
+    bedrooms: '',
+    bathrooms: '',
+    condominium: '' as 'casarao-museu' | 'casarao-fico' | '',
+    amenities: [] as string[],
+    nearbyAttractions: '',
+    available: true
+  });
+  
+  const [editImages, setEditImages] = useState<File[]>([]);
+  const [editVideo, setEditVideo] = useState<File | null>(null);
+  const [currentImages, setCurrentImages] = useState<string[]>([]);
+  const [currentVideo, setCurrentVideo] = useState<string | null>(null);
+
+  // Estados para FAQ Videos
+  const [faqVideoModal, setFaqVideoModal] = useState(false);
+  const [editingFaqVideo, setEditingFaqVideo] = useState<string | null>(null);
+  const [videoPreviewLoading, setVideoPreviewLoading] = useState(false);
+  const [videoPreviewError, setVideoPreviewError] = useState<string | null>(null);
+  const [faqVideoForm, setFaqVideoForm] = useState({
+    faqQuestionId: '',
+    description: '',
+    videoFile: null as File | null,
+    videoUrl: '',
+    orderIndex: 0
+  });
+
+  // Funções utilitárias para YouTube
+  const extractYouTubeVideoId = (url: string): string | null => {
+    const patterns = [
+      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([^&\n?#]+)/,
+      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([^&\n?#]+)/,
+      /(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^&\n?#]+)/,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  };
+
+  const isValidYouTubeUrl = (url: string): boolean => {
+    return extractYouTubeVideoId(url) !== null;
+  };
+
+  const getYouTubeEmbedUrl = (url: string): string | null => {
+    const videoId = extractYouTubeVideoId(url);
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+  };
+
+
+  // Função para mostrar popup personalizado
+  const showPopup = (type: 'success' | 'error' | 'info', title: string, message: string) => {
+    setPopup({
+      isOpen: true,
+      type,
+      title,
+      message
+    });
+  };
+
+  const closePopup = () => {
+    setPopup(prev => ({ ...prev, isOpen: false }));
+  };
 
   const startEditing = (apartmentId: string) => {
-    setEditingApartment(apartmentId);
-    setActiveTab('edit');
+    const apartment = apartments.find(apt => apt.id === apartmentId);
+    if (apartment) {
+      // Carregar dados do apartamento no formulário de edição
+      setEditForm({
+        title: apartment.title,
+        type: apartment.type,
+        description: apartment.description,
+        size: apartment.size.toString(),
+        bedrooms: apartment.bedrooms.toString(),
+        bathrooms: apartment.bathrooms.toString(),
+        condominium: apartment.location.condominium,
+        amenities: apartment.amenities,
+        nearbyAttractions: '',
+        available: apartment.available
+      });
+      
+      // Carregar imagens e vídeo atuais
+      setCurrentImages(apartment.images || []);
+      setCurrentVideo(apartment.video || null);
+      
+      // Limpar novos uploads
+      setEditImages([]);
+      setEditVideo(null);
+      
+      setEditingApartment(apartmentId);
+      setActiveTab('edit');
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingApartment) return;
+
+    setIsSubmitting(true);
+    try {
+      let finalImages = [...currentImages];
+      let finalVideo = currentVideo;
+
+      // Upload novas imagens se houver
+      if (editImages.length > 0) {
+        const uploadedImages = await uploadImages(editImages);
+        finalImages = [...finalImages, ...uploadedImages];
+      }
+
+      // Upload novo vídeo se houver
+      if (editVideo) {
+        finalVideo = await uploadVideo(editVideo);
+      }
+
+      // Criar objeto do apartamento atualizado
+      const updatedApartment = {
+        id: editingApartment,
+        title: editForm.title,
+        slug: editForm.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+        description: editForm.description,
+        price: { monthly: 0, daily: 0 }, // Manter preços existentes
+        images: finalImages,
+        video: finalVideo || undefined,
+        amenities: editForm.amenities,
+        size: parseInt(editForm.size),
+        bedrooms: parseInt(editForm.bedrooms),
+        bathrooms: parseInt(editForm.bathrooms),
+        type: editForm.type,
+        available: editForm.available,
+        location: {
+          lat: 0, // Manter coordenadas existentes
+          lng: 0,
+          address: '', // Manter endereço existente
+          condominium: editForm.condominium as 'casarao-museu' | 'casarao-fico'
+        }
+      };
+
+      await updateApartment(editingApartment, updatedApartment);
+      
+      showPopup('success', 'Sucesso!', 'Apartamento atualizado com sucesso!');
+      
+      // Voltar para a lista
+      setActiveTab('list');
+      setEditingApartment(null);
+      
+    } catch (error) {
+      console.error('Erro ao atualizar apartamento:', error);
+      showPopup('error', 'Erro!', 'Erro ao atualizar apartamento. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setActiveTab('list');
+    setEditingApartment(null);
+    // Limpar formulário
+    setEditForm({
+      title: '',
+      type: 'fixed',
+      description: '',
+      size: '',
+      bedrooms: '',
+      bathrooms: '',
+      condominium: '',
+      amenities: [],
+      nearbyAttractions: '',
+      available: true
+    });
+    setEditImages([]);
+    setEditVideo(null);
+    setCurrentImages([]);
+    setCurrentVideo(null);
   };
 
   const handleDeleteApartment = (apartmentId: string) => {
@@ -92,6 +284,108 @@ const Admin: React.FC = () => {
     });
   };
 
+  // Funções para gerenciar FAQ Videos
+  const handleAddFaqVideo = async () => {
+    if (!faqVideoForm.faqQuestionId) {
+      showPopup('error', 'Erro!', 'Pergunta FAQ é obrigatória.');
+      return;
+    }
+
+    if (!faqVideoForm.videoFile && !faqVideoForm.videoUrl) {
+      showPopup('error', 'Erro!', 'É necessário fornecer um arquivo de vídeo ou uma URL.');
+      return;
+    }
+
+    // Validar URL do YouTube se fornecida
+    if (faqVideoForm.videoUrl && !isValidYouTubeUrl(faqVideoForm.videoUrl)) {
+      showPopup('error', 'Erro!', 'Apenas URLs do YouTube são aceitas. Use links como: https://www.youtube.com/watch?v=...');
+      return;
+    }
+
+    const success = await addFaqVideo(
+      faqVideoForm.faqQuestionId,
+      faqVideoForm.description,
+      faqVideoForm.videoFile || undefined,
+      faqVideoForm.videoUrl || undefined,
+      undefined, // thumbnailUrl será gerada automaticamente
+      faqVideoForm.orderIndex || undefined
+    );
+
+    if (success) {
+      showPopup('success', 'Sucesso!', 'Vídeo FAQ adicionado com sucesso!');
+      setFaqVideoModal(false);
+      setFaqVideoForm({
+        faqQuestionId: '',
+        description: '',
+        videoFile: null,
+        videoUrl: '',
+        orderIndex: 0
+      });
+      setVideoPreviewLoading(false);
+      setVideoPreviewError(null);
+    } else {
+      showPopup('error', 'Erro!', 'Erro ao adicionar vídeo FAQ. Tente novamente.');
+    }
+  };
+
+  const handleEditFaqVideo = async () => {
+    if (!editingFaqVideo) return;
+
+    const success = await updateFaqVideo(editingFaqVideo, {
+      faq_question_id: faqVideoForm.faqQuestionId,
+      description: faqVideoForm.description,
+      video_url: faqVideoForm.videoUrl || null,
+      thumbnail_url: null, // Será gerada automaticamente
+      order_index: faqVideoForm.orderIndex
+    });
+
+    if (success) {
+      showPopup('success', 'Sucesso!', 'Vídeo FAQ atualizado com sucesso!');
+      setFaqVideoModal(false);
+      setEditingFaqVideo(null);
+      setFaqVideoForm({
+        faqQuestionId: '',
+        description: '',
+        videoFile: null,
+        videoUrl: '',
+        orderIndex: 0
+      });
+      setVideoPreviewLoading(false);
+      setVideoPreviewError(null);
+    } else {
+      showPopup('error', 'Erro!', 'Erro ao atualizar vídeo FAQ. Tente novamente.');
+    }
+  };
+
+  const startEditingFaqVideo = (video: any) => {
+    setEditingFaqVideo(video.id);
+    setFaqVideoForm({
+      faqQuestionId: video.faq_question_id || '',
+      description: video.description || '',
+      videoFile: null,
+      videoUrl: video.video_url || '',
+      orderIndex: video.order_index
+    });
+    setFaqVideoModal(true);
+  };
+
+  const handleDeleteFaqVideo = (videoId: string, videoTitle: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Confirmar Exclusão',
+      message: `Tem certeza que deseja excluir o vídeo "${videoTitle}"? Esta ação não pode ser desfeita.`,
+      onConfirm: async () => {
+        const success = await deleteFaqVideo(videoId);
+        if (success) {
+          showPopup('success', 'Sucesso!', 'Vídeo FAQ excluído com sucesso!');
+        } else {
+          showPopup('error', 'Erro!', 'Erro ao excluir vídeo FAQ. Tente novamente.');
+        }
+        setConfirmModal({ ...confirmModal, isOpen: false });
+      }
+    });
+  };
+
   // Funções para o formulário de adicionar apartamento
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -112,11 +406,12 @@ const Admin: React.FC = () => {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    console.log('Arquivos selecionados para upload:', files);
     
     // Validar tamanho dos arquivos (máximo 10MB cada)
     const validFiles = files.filter(file => {
       if (file.size > 10 * 1024 * 1024) {
-        alert(`Arquivo ${file.name} é muito grande. Máximo 10MB por imagem.`);
+        showPopup('error', 'Arquivo muito grande', `Arquivo ${file.name} é muito grande. Máximo 10MB por imagem.`);
         return false;
       }
       return true;
@@ -125,13 +420,18 @@ const Admin: React.FC = () => {
     // Validar tipos de arquivo
     const imageFiles = validFiles.filter(file => {
       if (!file.type.startsWith('image/')) {
-        alert(`Arquivo ${file.name} não é uma imagem válida.`);
+        showPopup('error', 'Tipo de arquivo inválido', `Arquivo ${file.name} não é uma imagem válida.`);
         return false;
       }
       return true;
     });
     
-    setApartmentImages(prev => [...prev, ...imageFiles]);
+    console.log('Imagens válidas:', imageFiles);
+    setApartmentImages(prev => {
+      const newImages = [...prev, ...imageFiles];
+      console.log('Total de imagens após adição:', newImages);
+      return newImages;
+    });
     
     // Limpar o input para permitir selecionar os mesmos arquivos novamente
     e.target.value = '';
@@ -139,22 +439,24 @@ const Admin: React.FC = () => {
 
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    console.log('Vídeo selecionado:', file);
     
     if (file) {
       // Validar tamanho do vídeo (máximo 50MB)
       if (file.size > 50 * 1024 * 1024) {
-        alert('Vídeo muito grande. Máximo 50MB.');
+        showPopup('error', 'Vídeo muito grande', 'Vídeo muito grande. Máximo 50MB.');
         e.target.value = '';
         return;
       }
       
       // Validar tipo de arquivo
       if (!file.type.startsWith('video/')) {
-        alert('Arquivo selecionado não é um vídeo válido.');
+        showPopup('error', 'Tipo de arquivo inválido', 'Arquivo selecionado não é um vídeo válido.');
         e.target.value = '';
         return;
       }
       
+      console.log('Vídeo válido, definindo no estado:', file);
       setApartmentVideo(file);
     }
     
@@ -189,26 +491,38 @@ const Admin: React.FC = () => {
 
   const handleSubmitApartment = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Formulário submetido!', apartmentForm);
     
     if (!apartmentForm.title || !apartmentForm.condominium || !apartmentForm.description) {
-      alert('Por favor, preencha todos os campos obrigatórios.');
+      showPopup('error', 'Campos Obrigatórios', 'Por favor, preencha todos os campos obrigatórios.');
       return;
     }
 
     setIsSubmitting(true);
+    console.log('Iniciando processo de criação do apartamento...');
 
     try {
       // Upload das imagens
       let imageUrls: string[] = [];
+      console.log('Imagens para upload:', apartmentImages);
       if (apartmentImages.length > 0) {
+        console.log('Iniciando upload de', apartmentImages.length, 'imagens...');
         imageUrls = await uploadImages(apartmentImages);
+        console.log('URLs das imagens após upload:', imageUrls);
+      } else {
+        console.log('Nenhuma imagem para upload');
       }
 
       // Upload do vídeo
       let videoUrl: string | undefined;
+      console.log('Vídeo para upload:', apartmentVideo);
       if (apartmentVideo) {
+        console.log('Iniciando upload do vídeo...');
         const result = await uploadVideo(apartmentVideo);
         videoUrl = result || undefined;
+        console.log('URL do vídeo após upload:', videoUrl);
+      } else {
+        console.log('Nenhum vídeo para upload');
       }
 
       // Definir endereço baseado no condomínio
@@ -250,16 +564,21 @@ const Admin: React.FC = () => {
       };
 
       // Adicionar apartamento
-      await addApartment(newApartment);
+      console.log('Objeto do apartamento criado:', newApartment);
+      const result = await addApartment(newApartment);
+      console.log('Resultado da criação:', result);
       
       // Resetar formulário e fechar modal
       resetForm();
       setAddApartmentModal(false);
       
-      alert('Apartamento adicionado com sucesso!');
+      // Atualizar estatísticas
+      await refreshStats();
+      
+      showPopup('success', 'Sucesso!', 'Apartamento adicionado com sucesso!');
     } catch (error) {
       console.error('Erro ao adicionar apartamento:', error);
-      alert('Erro ao adicionar apartamento. Tente novamente.');
+      showPopup('error', 'Erro', 'Erro ao adicionar apartamento. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
@@ -353,6 +672,18 @@ const Admin: React.FC = () => {
                   <List className="h-5 w-5" />
                   {sidebarOpen && <span className="ml-3">Apartamentos ({apartments.length})</span>}
                 </button>
+
+                <button
+                  onClick={() => setActiveTab('faq')}
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
+                    activeTab === 'faq'
+                      ? 'bg-primary text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  {sidebarOpen && <span className="ml-3">FAQ Vídeos ({faqVideos.length})</span>}
+                </button>
                 
                 
                 {editingApartment && (
@@ -389,7 +720,13 @@ const Admin: React.FC = () => {
               <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 lg:p-8">
             {activeTab === 'dashboard' && (
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Dashboard</h2>
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h2>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    Tempo Real
+                  </div>
+                </div>
                 
                 {/* Cards de Estatísticas */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
@@ -397,7 +734,7 @@ const Admin: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-blue-100 text-xs sm:text-sm">Total de Apartamentos</p>
-                        <p className="text-xl sm:text-2xl font-bold">{apartments.length}</p>
+                        <p className="text-xl sm:text-2xl font-bold">{dashboardStats.totalApartments}</p>
                       </div>
                       <Home className="h-6 w-6 sm:h-8 sm:w-8 text-blue-200" />
                     </div>
@@ -407,7 +744,7 @@ const Admin: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-green-100 text-xs sm:text-sm">Apartamentos Disponíveis</p>
-                        <p className="text-xl sm:text-2xl font-bold">{apartments.filter(apt => apt.available).length}</p>
+                        <p className="text-xl sm:text-2xl font-bold">{dashboardStats.availableApartments}</p>
                       </div>
                       <ToggleRight className="h-6 w-6 sm:h-8 sm:w-8 text-green-200" />
                     </div>
@@ -417,7 +754,7 @@ const Admin: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-red-100 text-xs sm:text-sm">Apartamentos Alugados</p>
-                        <p className="text-xl sm:text-2xl font-bold">{apartments.filter(apt => !apt.available).length}</p>
+                        <p className="text-xl sm:text-2xl font-bold">{dashboardStats.rentedApartments}</p>
                       </div>
                       <ToggleLeft className="h-6 w-6 sm:h-8 sm:w-8 text-red-200" />
                     </div>
@@ -427,7 +764,7 @@ const Admin: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-purple-100 text-xs sm:text-sm">Total de Visualizações</p>
-                        <p className="text-xl sm:text-2xl font-bold">{stats.totalViews}</p>
+                        <p className="text-xl sm:text-2xl font-bold">{dashboardStats.totalViews}</p>
                       </div>
                       <Eye className="h-6 w-6 sm:h-8 sm:w-8 text-purple-200" />
                     </div>
@@ -446,8 +783,8 @@ const Admin: React.FC = () => {
                   <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg p-4 sm:p-6 text-white">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-yellow-100 text-xs sm:text-sm">Interesse em Alugados</p>
-                        <p className="text-xl sm:text-2xl font-bold">{getInterestsCount().rented}</p>
+                        <p className="text-yellow-100 text-xs sm:text-sm">Total de Mensagens</p>
+                        <p className="text-xl sm:text-2xl font-bold">{dashboardStats.totalMessages}</p>
                       </div>
                       <MessageCircle className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-200" />
                     </div>
@@ -462,18 +799,18 @@ const Admin: React.FC = () => {
                       Visualizações por Apartamento
                     </h3>
                     <div className="space-y-3">
-                      {apartments.map((apartment) => (
-                        <div key={apartment.id} className="flex items-center justify-between">
+                      {apartmentAnalytics.map((analytic) => (
+                        <div key={analytic.apartmentId} className="flex items-center justify-between">
                           <span className="text-sm text-gray-600 truncate flex-1 mr-2">
-                            {apartment.title}
+                            {analytic.apartmentTitle}
                           </span>
                           <span className="text-sm font-medium text-gray-900">
-                            {stats.apartmentViews[apartment.id] || 0} visualizações
+                            {analytic.views} visualizações
                           </span>
                         </div>
                       ))}
-                      {apartments.length === 0 && (
-                        <p className="text-gray-500 text-sm">Nenhum apartamento cadastrado</p>
+                      {apartmentAnalytics.length === 0 && (
+                        <p className="text-gray-500 text-sm">Nenhuma visualização registrada</p>
                       )}
                     </div>
                   </div>
@@ -484,18 +821,18 @@ const Admin: React.FC = () => {
                       Mensagens por Apartamento
                     </h3>
                     <div className="space-y-3">
-                      {apartments.map((apartment) => (
-                        <div key={apartment.id} className="flex items-center justify-between">
+                      {apartmentAnalytics.map((analytic) => (
+                        <div key={analytic.apartmentId} className="flex items-center justify-between">
                           <span className="text-sm text-gray-600 truncate flex-1 mr-2">
-                            {apartment.title}
+                            {analytic.apartmentTitle}
                           </span>
                           <span className="text-sm font-medium text-gray-900">
-                            {stats.apartmentMessages[apartment.id] || 0} mensagens
+                            {analytic.messages} mensagens
                           </span>
                         </div>
                       ))}
-                      {apartments.length === 0 && (
-                        <p className="text-gray-500 text-sm">Nenhum apartamento cadastrado</p>
+                      {apartmentAnalytics.length === 0 && (
+                        <p className="text-gray-500 text-sm">Nenhuma mensagem registrada</p>
                       )}
                     </div>
                   </div>
@@ -509,17 +846,21 @@ const Admin: React.FC = () => {
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {getApartmentsWithInterests().map((apartment) => (
                         <div key={apartment.apartment_id} className={`bg-white p-4 rounded-lg border flex items-center justify-between ${
+                          !apartment.apartment_exists ? 'border-gray-300 bg-gray-50' :
                           !apartment.apartment_available ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'
                         }`}>
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
                               <h4 className="font-medium text-gray-900">{apartment.apartment_title}</h4>
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                apartment.apartment_available 
+                                !apartment.apartment_exists
+                                  ? 'bg-gray-100 text-gray-800'
+                                  : apartment.apartment_available 
                                   ? 'bg-green-100 text-green-800' 
                                   : 'bg-red-100 text-red-800'
                               }`}>
-                                {apartment.apartment_available ? 'Disponível' : 'Alugado'}
+                                {!apartment.apartment_exists ? 'Excluído' : 
+                                 apartment.apartment_available ? 'Disponível' : 'Alugado'}
                               </span>
                             </div>
                             <p className="text-sm text-gray-600">
@@ -789,10 +1130,400 @@ const Admin: React.FC = () => {
             )}
 
 
-            {activeTab === 'edit' && (
+            {activeTab === 'edit' && editingApartment && (
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Editar Apartamento</h2>
-                <p className="text-gray-600">Funcionalidade de editar apartamento será implementada aqui.</p>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Editar Apartamento</h2>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    ← Voltar à Lista
+                  </button>
+                </div>
+
+                <form onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }} className="space-y-6">
+                  {/* Título */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Título do Apartamento
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.title}
+                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      required
+                    />
+                  </div>
+
+                  {/* Tipo e Status */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Tipo de Locação
+                      </label>
+                      <select
+                        value={editForm.type}
+                        onChange={(e) => setEditForm({ ...editForm, type: e.target.value as any })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      >
+                        <option value="fixed">Fixa</option>
+                        <option value="temporary">Temporada</option>
+                        <option value="both">Ambos</option>
+                        <option value="experience">Experiência</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Status
+                      </label>
+                      <select
+                        value={editForm.available ? 'available' : 'rented'}
+                        onChange={(e) => setEditForm({ ...editForm, available: e.target.value === 'available' })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      >
+                        <option value="available">Disponível</option>
+                        <option value="rented">Alugado</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Descrição */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Descrição
+                    </label>
+                    <textarea
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      required
+                    />
+                  </div>
+
+                  {/* Detalhes do Apartamento */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Tamanho (m²)
+                      </label>
+                      <input
+                        type="number"
+                        value={editForm.size}
+                        onChange={(e) => setEditForm({ ...editForm, size: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Quartos
+                      </label>
+                      <input
+                        type="number"
+                        value={editForm.bedrooms}
+                        onChange={(e) => setEditForm({ ...editForm, bedrooms: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Banheiros
+                      </label>
+                      <input
+                        type="number"
+                        value={editForm.bathrooms}
+                        onChange={(e) => setEditForm({ ...editForm, bathrooms: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Condomínio */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Condomínio
+                    </label>
+                    <select
+                      value={editForm.condominium}
+                      onChange={(e) => setEditForm({ ...editForm, condominium: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      required
+                    >
+                      <option value="">Selecione um condomínio</option>
+                      <option value="casarao-museu">Casarão Museu</option>
+                      <option value="casarao-fico">Casarão Fico</option>
+                    </select>
+                  </div>
+
+                  {/* Comodidades */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Comodidades
+                    </label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {['Wi-Fi', 'Ar Condicionado', 'TV', 'Cozinha', 'Geladeira', 'Micro-ondas', 'Máquina de Lavar', 'Estacionamento', 'Piscina', 'Academia'].map((amenity) => (
+                        <label key={amenity} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={editForm.amenities.includes(amenity)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setEditForm({ ...editForm, amenities: [...editForm.amenities, amenity] });
+                              } else {
+                                setEditForm({ ...editForm, amenities: editForm.amenities.filter(a => a !== amenity) });
+                              }
+                            }}
+                            className="mr-2"
+                          />
+                          <span className="text-sm">{amenity}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Imagens Atuais */}
+                  {currentImages.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Imagens Atuais
+                      </label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {currentImages.map((image, index) => (
+                          <div key={index} className="relative">
+                            <img
+                              src={image}
+                              alt={`Imagem ${index + 1}`}
+                              className="w-full h-24 object-cover rounded-lg"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setCurrentImages(currentImages.filter((_, i) => i !== index))}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Novas Imagens */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Adicionar Novas Imagens
+                    </label>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => setEditImages(Array.from(e.target.files || []))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Vídeo Atual */}
+                  {currentVideo && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Vídeo Atual
+                      </label>
+                      <div className="relative">
+                        <video
+                          src={currentVideo}
+                          controls
+                          className="w-full max-w-md h-48 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setCurrentVideo(null)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Novo Vídeo */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {currentVideo ? 'Substituir Vídeo' : 'Adicionar Vídeo'}
+                    </label>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => setEditVideo(e.target.files?.[0] || null)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Botões de Ação */}
+                  <div className="flex gap-4 pt-6">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="flex-1 bg-primary text-white py-3 px-6 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {activeTab === 'faq' && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">FAQ Vídeos</h2>
+                  <button
+                    onClick={() => {
+                      setEditingFaqVideo(null);
+                      setFaqVideoForm({
+                        faqQuestionId: '',
+                        description: '',
+                        videoFile: null,
+                        videoUrl: '',
+                        orderIndex: faqVideos.length + 1
+                      });
+                      setFaqVideoModal(true);
+                    }}
+                    className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Adicionar Vídeo
+                  </button>
+                </div>
+
+                <div className="grid gap-4">
+                  {faqVideos.map((video) => (
+                    <div key={video.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="bg-primary text-white text-sm font-medium px-2 py-1 rounded-full">
+                              #{video.order_index}
+                            </span>
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {faqs.find(f => f.id === video.faq_question_id)?.question || video.title}
+                            </h3>
+                            <button
+                              onClick={() => toggleVideoStatus(video.id)}
+                              className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                                video.is_active
+                                  ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                              }`}
+                            >
+                              {video.is_active ? (
+                                <>
+                                  <ToggleRight className="h-3 w-3" />
+                                  Ativo
+                                </>
+                              ) : (
+                                <>
+                                  <ToggleLeft className="h-3 w-3" />
+                                  Inativo
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          
+                          {video.description && (
+                            <p className="text-gray-600 mb-3">{video.description}</p>
+                          )}
+                          
+                          <div className="flex items-center gap-4 text-sm text-gray-500">
+                            {video.video_file_path && (
+                              <span>📁 Arquivo: {video.video_file_path.split('/').pop()}</span>
+                            )}
+                            {video.video_url && (
+                              <span>🔗 URL: {video.video_url}</span>
+                            )}
+                            {video.thumbnail_url && (
+                              <span>🖼️ Thumbnail: {video.thumbnail_url}</span>
+                            )}
+                          </div>
+                          
+                          <div className="mt-3">
+                            {video.video_url && video.video_url.includes('youtube.com/embed/') ? (
+                              <iframe
+                                src={video.video_url}
+                                className="w-full max-w-md h-48 rounded-lg"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                              />
+                            ) : (
+                              <video
+                                src={video.video_url ?? video.video_file_path ?? undefined}
+                                controls
+                                className="w-full max-w-md h-48 object-cover rounded-lg"
+                                poster={video.thumbnail_url ?? undefined}
+                              />
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 ml-4">
+                          <button
+                            onClick={() => startEditingFaqVideo(video)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Editar vídeo"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteFaqVideo(video.id, video.title)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Excluir vídeo"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {faqVideos.length === 0 && (
+                    <div className="text-center py-12">
+                      <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum vídeo FAQ</h3>
+                      <p className="text-gray-500 mb-4">Adicione vídeos para responder às perguntas frequentes dos usuários.</p>
+                      <button
+                        onClick={() => {
+                          setEditingFaqVideo(null);
+                          setFaqVideoForm({
+                            faqQuestionId: '',
+                            description: '',
+                            videoFile: null,
+                            videoUrl: '',
+                            orderIndex: 1
+                          });
+                          setFaqVideoModal(true);
+                        }}
+                        className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+                      >
+                        Adicionar Primeiro Vídeo
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             </div>
@@ -853,22 +1584,40 @@ const Admin: React.FC = () => {
               <div className="space-y-3">
                 {interestModal.interests.map((interest, index) => (
                   <div key={interest.id} className="bg-gray-50 p-4 rounded-lg border">
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <span className="bg-primary text-white text-sm font-medium px-2 py-1 rounded-full">
                           #{index + 1}
                         </span>
-                        <span className="font-medium text-gray-900">{interest.user_name}</span>
+                        <div>
+                          <span className="font-medium text-gray-900 block">{interest.user_name}</span>
+                          <span className="text-sm text-gray-600">+55 {interest.user_whatsapp}</span>
+                        </div>
                       </div>
-                      <span className="text-xs text-gray-500">
-                        {new Date(interest.created_at || '').toLocaleDateString('pt-BR', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const whatsappNumber = `55${interest.user_whatsapp.replace(/\D/g, '')}`;
+                            const message = `Olá ${interest.user_name}! O apartamento "${interest.apartment_title}" está disponível. Gostaria de conversar?`;
+                            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+                            window.open(whatsappUrl, '_blank');
+                          }}
+                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
+                          title="Contatar via WhatsApp"
+                        >
+                          <MessageCircle className="h-3 w-3" />
+                          WhatsApp
+                        </button>
+                        <span className="text-xs text-gray-500">
+                          {new Date(interest.created_at || '').toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
                     </div>
                     
                     <div className="flex items-center gap-2">
@@ -903,7 +1652,7 @@ const Admin: React.FC = () => {
             <div className="mt-6 pt-4 border-t border-gray-200">
               <div className="flex items-center justify-between text-sm text-gray-600">
                 <span>Total de interessados: <strong>{interestModal.interests.length}</strong></span>
-                <span>Ordenado por ordem de chegada (mais recente primeiro)</span>
+                <span>Ordenado por ordem de chegada (primeiro a chegar no topo)</span>
               </div>
             </div>
           </div>
@@ -1219,28 +1968,335 @@ const Admin: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Botões de Ação */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-6 border-t border-gray-200 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetForm();
+                      setAddApartmentModal(false);
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors order-2 sm:order-1"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
+                  >
+                    <span className="hidden sm:inline">{isSubmitting ? 'Adicionando...' : 'Adicionar Apartamento'}</span>
+                    <span className="sm:hidden">{isSubmitting ? 'Adicionando...' : 'Adicionar'}</span>
+                  </button>
+                </div>
               </form>
             </div>
+          </div>
+        </div>
+      )}
 
-            {/* Botões de Ação */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-gray-200 flex-shrink-0 bg-white">
+      {/* Popup Personalizado */}
+      {popup.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4 transform transition-all duration-300 scale-100">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                {popup.type === 'success' && (
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </div>
+                )}
+                {popup.type === 'error' && (
+                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </div>
+                )}
+                {popup.type === 'info' && (
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                  </div>
+                )}
+                <h3 className="text-lg font-semibold text-gray-900">{popup.title}</h3>
+              </div>
+            </div>
+            <p className="text-gray-600 mb-6">{popup.message}</p>
+            <div className="flex justify-end">
+              <button
+                onClick={closePopup}
+                className={`px-6 py-2 rounded-md font-medium transition-colors ${
+                  popup.type === 'success' 
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : popup.type === 'error'
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de FAQ Vídeo */}
+      {faqVideoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-900">
+                {editingFaqVideo ? 'Editar Vídeo FAQ' : 'Adicionar Vídeo FAQ'}
+              </h3>
               <button
                 onClick={() => {
-                  resetForm();
-                  setAddApartmentModal(false);
+                  setFaqVideoModal(false);
+                  setEditingFaqVideo(null);
+                  setFaqVideoForm({
+                    faqQuestionId: '',
+                    description: '',
+                    videoFile: null,
+                    videoUrl: '',
+                    orderIndex: 0
+                  });
                 }}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors order-2 sm:order-1"
+                className="text-gray-400 hover:text-gray-600"
               >
-                Cancelar
+                <X className="h-6 w-6" />
               </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
-              >
-                <span className="hidden sm:inline">{isSubmitting ? 'Adicionando...' : 'Adicionar Apartamento'}</span>
-                <span className="sm:hidden">{isSubmitting ? 'Adicionando...' : 'Adicionar'}</span>
-              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                editingFaqVideo ? handleEditFaqVideo() : handleAddFaqVideo();
+              }} className="space-y-4">
+                
+                {/* Pergunta FAQ */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Pergunta Frequente *
+                  </label>
+                  <select
+                    value={faqVideoForm.faqQuestionId}
+                    onChange={(e) => setFaqVideoForm({ ...faqVideoForm, faqQuestionId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required
+                  >
+                    <option value="">Selecione uma pergunta...</option>
+                    {faqs.map((faq) => (
+                      <option key={faq.id} value={faq.id}>
+                        {faq.question}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Descrição */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descrição
+                  </label>
+                  <textarea
+                    value={faqVideoForm.description}
+                    onChange={(e) => setFaqVideoForm({ ...faqVideoForm, description: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Descrição opcional do vídeo..."
+                  />
+                </div>
+
+                {/* Upload do Vídeo */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Arquivo de Vídeo {faqVideoForm.videoUrl ? '(Opcional)' : '*'}
+                  </label>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    onChange={(e) => setFaqVideoForm({ ...faqVideoForm, videoFile: e.target.files?.[0] || null })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required={!editingFaqVideo && !faqVideoForm.videoUrl}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {faqVideoForm.videoUrl 
+                      ? 'Opcional se você já forneceu uma URL de vídeo' 
+                      : 'Formatos aceitos: MP4, WebM, OGG, AVI, MOV, WMV (máx. 100MB)'
+                    }
+                  </p>
+                </div>
+
+                {/* URL do Vídeo (Opcional) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    URL do Vídeo (Opcional)
+                  </label>
+                  <input
+                    type="url"
+                    value={faqVideoForm.videoUrl}
+                    onChange={(e) => setFaqVideoForm({ ...faqVideoForm, videoUrl: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="https://exemplo.com/video.mp4"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {faqVideoForm.videoFile 
+                      ? 'Opcional se você já fez upload de um arquivo' 
+                      : 'Apenas URLs do YouTube são aceitas'}
+                  </p>
+                </div>
+
+                {/* Thumbnail Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Thumbnail (Opcional)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Para vídeos do YouTube, a thumbnail será automática. Para arquivos, você pode adicionar uma capa personalizada.
+                  </p>
+                </div>
+
+                {/* Ordem de Exibição */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ordem de Exibição
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={faqVideoForm.orderIndex}
+                    onChange={(e) => setFaqVideoForm({ ...faqVideoForm, orderIndex: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Números menores aparecem primeiro na lista
+                  </p>
+                </div>
+
+                {/* Preview do Vídeo */}
+                {(faqVideoForm.videoUrl || faqVideoForm.videoFile) && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Preview
+                    </label>
+                    <div className="relative bg-gray-100 rounded-lg overflow-hidden">
+                      {videoPreviewLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-200 z-10">
+                          <div className="text-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                            <p className="text-sm text-gray-600">Carregando vídeo...</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {videoPreviewError && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-red-50 z-10">
+                          <div className="text-center p-4">
+                            <p className="text-sm text-red-600 mb-2">Erro ao carregar vídeo</p>
+                            <p className="text-xs text-red-500">{videoPreviewError}</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {faqVideoForm.videoUrl && isValidYouTubeUrl(faqVideoForm.videoUrl) ? (
+                        <iframe
+                          src={getYouTubeEmbedUrl(faqVideoForm.videoUrl) || undefined}
+                          className="w-full max-w-md h-48 rounded-lg"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          onLoad={() => {
+                            setVideoPreviewLoading(false);
+                            setVideoPreviewError(null);
+                          }}
+                          onError={() => {
+                            setVideoPreviewLoading(false);
+                            setVideoPreviewError('Erro ao carregar vídeo do YouTube.');
+                          }}
+                        />
+                      ) : (
+                        <video
+                          src={faqVideoForm.videoFile ? URL.createObjectURL(faqVideoForm.videoFile) : undefined}
+                          controls
+                          preload="metadata"
+                          className="w-full max-w-md h-48 object-cover rounded-lg"
+                          onLoadStart={() => {
+                            console.log('Carregando preview do vídeo...');
+                            setVideoPreviewLoading(true);
+                            setVideoPreviewError(null);
+                          }}
+                          onLoadedMetadata={(e) => {
+                            const video = e.target as HTMLVideoElement;
+                            console.log(`Vídeo carregado: ${Math.round(video.duration)}s de duração`);
+                            setVideoPreviewLoading(false);
+                          }}
+                          onCanPlay={() => {
+                            setVideoPreviewLoading(false);
+                          }}
+                          onError={(e) => {
+                            console.error('Erro ao carregar preview:', e);
+                            setVideoPreviewLoading(false);
+                            setVideoPreviewError('Não foi possível carregar o vídeo. Verifique o formato.');
+                          }}
+                        />
+                      )}
+                      
+                      {!videoPreviewLoading && !videoPreviewError && (
+                        <div className="absolute top-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
+                          Preview
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs text-gray-500">
+                        <strong>Fonte:</strong> {faqVideoForm.videoFile ? `Arquivo: ${faqVideoForm.videoFile.name}` : `URL: ${faqVideoForm.videoUrl}`}
+                      </p>
+                      {faqVideoForm.videoFile && (
+                        <p className="text-xs text-gray-500">
+                          <strong>Tamanho:</strong> {(faqVideoForm.videoFile.size / (1024 * 1024)).toFixed(2)} MB
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Botões */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors"
+                  >
+                    {editingFaqVideo ? 'Atualizar Vídeo' : 'Adicionar Vídeo'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFaqVideoModal(false);
+                      setEditingFaqVideo(null);
+                      setFaqVideoForm({
+                        faqQuestionId: '',
+                        description: '',
+                        videoFile: null,
+                        videoUrl: '',
+                        orderIndex: 0
+                      });
+                    }}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

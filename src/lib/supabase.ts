@@ -10,21 +10,33 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase environment variables not found. Using localStorage fallback mode.');
   
   // Create a mock supabase client that will cause hooks to fallback to localStorage
+  const mockQuery = {
+    select: () => mockQuery,
+    insert: () => mockQuery,
+    update: () => mockQuery,
+    delete: () => mockQuery,
+    upsert: () => mockQuery,
+    order: () => mockQuery,
+    limit: () => mockQuery,
+    single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+    eq: () => mockQuery,
+    then: (resolve: any) => resolve({ data: null, error: new Error('Supabase not configured') })
+  };
+
   supabase = {
-    from: () => ({
-      select: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-      insert: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-      update: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-      delete: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-      upsert: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
-    }),
+    from: () => mockQuery,
     storage: {
       from: () => ({
         upload: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
         remove: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
         getPublicUrl: () => ({ data: { publicUrl: '' } })
       })
-    }
+    },
+    channel: () => ({
+      on: () => ({ on: () => ({ subscribe: () => {} }) }),
+      subscribe: () => {}
+    }),
+    removeChannel: () => {}
   };
 } else {
   supabase = createClient(supabaseUrl, supabaseAnonKey);

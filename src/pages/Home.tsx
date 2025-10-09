@@ -2,8 +2,12 @@ import React, { useState } from 'react';
 import { MapPin, Shield, Star, Users, ShoppingCart, Dumbbell, Briefcase, WashingMachine, ChevronDown, Play, X } from 'lucide-react';
 import ImageCarousel from '../components/ImageCarousel';
 import ScrollToTopButton from '../components/ScrollToTopButton';
+import { useFaqVideos } from '../hooks/useFaqVideos';
+import { faqs } from '../data/faq';
 
 const Home: React.FC = () => {
+  const { activeVideos } = useFaqVideos();
+  
   const features = [
     {
       icon: MapPin,
@@ -30,33 +34,10 @@ const Home: React.FC = () => {
     { icon: WashingMachine, name: 'Lavanderia' },
   ];
 
-  const faqs = [
-    {
-      question: 'Qual a diferença entre moradia fixa e temporada?',
-      answer: 'Moradia fixa refere-se a aluguéis de longo prazo, geralmente com contratos anuais, para quem busca residência permanente. Moradia por temporada é para estadias curtas, como viagens a trabalho ou lazer, com contratos flexíveis e duração predeterminada.',
-      videoUrl: '/videos/faq1.mp4'
-    },
-    {
-      question: 'Quais documentos preciso para alugar um apartamento para moradia fixa?',
-      answer: 'São solicitados RG, CPF, comprovante de renda (holerite ou declaração de IR), comprovante de residência. Para autônomos ou profissionais liberais, podem ser solicitados extratos bancários e declaração de imposto de renda.',
-      videoUrl: '/videos/faq2.mp4'
-    },
-    {
-      question: 'Como funciona o pagamento do aluguel?',
-      answer: 'Para moradia fixa, o pagamento é mensal, geralmente por boleto ou transferência bancária. Para temporada, o pagamento pode ser feito integralmente no ato da reserva ou em parcelas, dependendo do período e do acordo, com um sinal no momento da reserva e o restante antes do check-in.',
-      videoUrl: '/videos/faq3.mp4'
-    },
-    {
-      question: 'Os apartamentos são mobiliados?',
-      answer: 'Não, os apartamentos para moradia fixa não são mobiliados. Os apartamentos de temporada sim, todos mobiliados.',
-      videoUrl: '/videos/faq4.mp4'
-    },
-    {
-      question: 'Posso visitar os apartamentos antes de alugar?',
-      answer: 'Sim, é possível agendar uma visita para conhecer os apartamentos de seu interesse. Entre em contato conosco pelo WhatsApp ou telefone para verificar a disponibilidade e marcar um horário.',
-      videoUrl: '/videos/faq5.mp4'
-    }
-  ];
+  // Função para encontrar vídeo de uma pergunta específica
+  const getVideoForQuestion = (questionId: string) => {
+    return activeVideos.find(video => video.faq_question_id === questionId);
+  };
 
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [videoModalOpen, setVideoModalOpen] = useState<string | null>(null);
@@ -273,23 +254,48 @@ const Home: React.FC = () => {
                     </p>
                     
                     {/* Preview do Vídeo */}
-                    <div className="bg-gray-100 rounded-lg overflow-hidden">
-                      <div 
-                        className="relative aspect-video bg-gray-200 cursor-pointer group hover:bg-gray-300 transition-colors"
-                        onClick={() => openVideoModal(faq.videoUrl)}
-                      >
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="bg-black bg-opacity-60 rounded-full p-4 group-hover:bg-opacity-80 transition-all">
-                            <Play className="h-8 w-8 text-white" />
+                    {(() => {
+                      const video = getVideoForQuestion(faq.id);
+                      const videoSrc = video?.video_url || video?.video_file_path;
+                      const isYouTube = video?.video_url && video.video_url.includes('youtube.com/embed/');
+                      
+                      return videoSrc ? (
+                        <div className="bg-gray-100 rounded-lg overflow-hidden">
+                          <div 
+                            className="relative aspect-video bg-gray-200 cursor-pointer group hover:bg-gray-300 transition-colors"
+                            onClick={() => openVideoModal(videoSrc)}
+                          >
+                            {isYouTube ? (
+                              <div className="relative w-full h-full">
+                                <img
+                                  src={video?.thumbnail_url || `https://img.youtube.com/vi/${videoSrc.split('/embed/')[1]}/maxresdefault.jpg`}
+                                  alt="Video thumbnail"
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="bg-black bg-opacity-60 rounded-full p-4 group-hover:bg-opacity-80 transition-all">
+                                    <Play className="h-8 w-8 text-white" />
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <video
+                                src={videoSrc}
+                                className="w-full h-full object-cover"
+                                poster={video?.thumbnail_url || undefined}
+                                muted
+                                preload="metadata"
+                              />
+                            )}
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                              <p className="text-white text-sm font-medium">
+                                Clique para assistir a explicação em vídeo
+                              </p>
+                            </div>
                           </div>
                         </div>
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-                          <p className="text-white text-sm font-medium">
-                            Clique para assistir a explicação em vídeo
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                      ) : null;
+                    })()}
                   </div>
                 )}
               </div>
@@ -308,17 +314,27 @@ const Home: React.FC = () => {
             >
               <X className="h-6 w-6" />
             </button>
-            <video
-              src={videoModalOpen}
-              controls
-              autoPlay
-              className="w-full h-auto max-h-[80vh]"
-              onError={() => {
-                console.error('Erro ao carregar vídeo:', videoModalOpen);
-              }}
-            >
-              Seu navegador não suporta a reprodução de vídeos.
-            </video>
+            {videoModalOpen.includes('youtube.com/embed/') ? (
+              <iframe
+                src={videoModalOpen}
+                className="w-full h-auto max-h-[80vh] aspect-video"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <video
+                src={videoModalOpen}
+                controls
+                autoPlay
+                className="w-full h-auto max-h-[80vh]"
+                onError={() => {
+                  console.error('Erro ao carregar vídeo:', videoModalOpen);
+                }}
+              >
+                Seu navegador não suporta a reprodução de vídeos.
+              </video>
+            )}
           </div>
         </div>
       )}

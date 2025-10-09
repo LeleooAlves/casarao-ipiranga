@@ -2,11 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { Home, Calendar, Star } from 'lucide-react';
 import ApartmentCard from '../components/ApartmentCard';
 import { useApartments } from '../hooks/useApartments';
-import { useApartmentStats } from '../hooks/useApartmentStats';
 
 const Catalog: React.FC = () => {
   const { apartments, isLoading } = useApartments();
-  const { incrementViews } = useApartmentStats();
   const [selectedCategory, setSelectedCategory] = useState<'fixed' | 'temporary' | 'experience'>('fixed');
   
   const filteredApartments = useMemo(() => {
@@ -20,8 +18,9 @@ const Catalog: React.FC = () => {
     });
   }, [apartments, selectedCategory]);
 
-  const handleApartmentClick = (apartmentId: string) => {
-    incrementViews(apartmentId);
+  const handleApartmentClick = () => {
+    // A visualização será registrada automaticamente na página de detalhes
+    // Não precisamos registrar aqui para evitar duplicação
   };
 
   return (

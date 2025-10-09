@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, MapPin, Bed, Bath, Square, ChevronLeft, ChevronRight, X, Phone, Mail } from 'lucide-react';
 import { useApartments } from '../hooks/useApartments';
-import { useApartmentStats } from '../hooks/useApartmentStats';
+import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useUserInterests } from '../hooks/useUserInterests';
 import WhatsAppButton from '../components/WhatsAppButton';
 
 const ApartmentDetails: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const { getApartmentBySlug } = useApartments();
-  const { incrementMessages } = useApartmentStats();
+  const { recordView, recordMessage } = useDashboardStats();
   const { addInterest } = useUserInterests();
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedTab, setSelectedTab] = useState('overview');
@@ -17,11 +17,13 @@ const ApartmentDetails: React.FC = () => {
   const [modalImageIndex, setModalImageIndex] = useState(0);
   const [formData, setFormData] = useState<{
     name: string;
+    whatsapp: string;
     checkIn: string;
     checkOut: string;
     type: 'fixed' | 'temporary' | 'both' | 'experience';
   }>({
     name: '',
+    whatsapp: '',
     checkIn: '',
     checkOut: '',
     type: 'temporary'
@@ -29,11 +31,41 @@ const ApartmentDetails: React.FC = () => {
 
   const apartment = getApartmentBySlug(slug || '');
 
+  // Função para formatar WhatsApp
+  const formatWhatsApp = (value: string) => {
+    // Remove tudo que não é número
+    const numbers = value.replace(/\D/g, '');
+    
+    // Limita a 11 dígitos (DDD + 9 dígitos)
+    const limited = numbers.slice(0, 11);
+    
+    // Aplica a formatação: DDD 00000.0000
+    if (limited.length <= 2) {
+      return limited;
+    } else if (limited.length <= 7) {
+      return `${limited.slice(0, 2)} ${limited.slice(2)}`;
+    } else {
+      return `${limited.slice(0, 2)} ${limited.slice(2, 7)}.${limited.slice(7)}`;
+    }
+  };
+
+  // Função para validar WhatsApp
+  const isValidWhatsApp = (whatsapp: string) => {
+    const numbers = whatsapp.replace(/\D/g, '');
+    return numbers.length === 11; // DDD (2) + número (9)
+  };
+
   useEffect(() => {
     if (apartment) {
       setFormData(prev => ({ ...prev, type: apartment.type }));
     }
   }, [apartment]);
+
+  useEffect(() => {
+    if (apartment) {
+      recordView(apartment.id, apartment.title, apartment.slug);
+    }
+  }, [apartment?.id]); // Apenas quando o ID do apartamento muda
 
   if (!apartment) {
     return (
@@ -59,6 +91,12 @@ const ApartmentDetails: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validar WhatsApp
+    if (!isValidWhatsApp(formData.whatsapp)) {
+      alert('Por favor, insira um número de WhatsApp válido no formato: DDD 00000.0000');
+      return;
+    }
+
     const whatsappNumber = "5511912131333"; // Número de WhatsApp
 
     let message = apartment.available 
@@ -66,6 +104,7 @@ const ApartmentDetails: React.FC = () => {
       : `Olá! Gostaria de demonstrar interesse no apartamento "${apartment.title}" que está atualmente alugado.\n\n`;
     
     message += `*Nome Completo*: ${formData.name}\n`;
+    message += `*WhatsApp*: +55 ${formData.whatsapp}\n`;
 
     if (apartment.type === 'temporary' || apartment.type === 'both') {
       message += `*Tipo de Interesse*: Temporada\n`;
@@ -94,12 +133,22 @@ const ApartmentDetails: React.FC = () => {
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
 
     // Registrar mensagem enviada
-    await incrementMessages(apartment.id);
+    await recordMessage(
+      apartment.id,
+      apartment.title,
+      apartment.slug,
+      formData.name,
+      message,
+      undefined, // email
+      undefined, // phone
+      apartment.available ? 'inquiry' : 'interest'
+    );
 
     // Registrar interesse do usuário
     await addInterest(
       apartment.id,
       formData.name,
+      formData.whatsapp,
       apartment.title,
       apartment.available
     );
@@ -109,6 +158,7 @@ const ApartmentDetails: React.FC = () => {
     // Opcional: Limpar o formulário após o envio
     setFormData({
       name: '',
+      whatsapp: '',
       checkIn: '',
       checkOut: '',
       type: 'temporary' as 'fixed' | 'temporary' | 'both' | 'experience'
@@ -419,6 +469,25 @@ const ApartmentDetails: React.FC = () => {
                     required
                     value={formData.name}
                     onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700 mb-1">
+                    WhatsApp (DDD 00000.0000)
+                  </label>
+                  <input
+                    type="text"
+                    id="whatsapp"
+                    name="whatsapp"
+                    required
+                    value={formData.whatsapp}
+                    onChange={(e) => {
+                      const formatted = formatWhatsApp(e.target.value);
+                      setFormData({ ...formData, whatsapp: formatted });
+                    }}
+                    placeholder="11 99999.9999"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   />
                 </div>

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useApartments } from './useApartments';
 
 export interface UserInterest {
   id: string;
   apartment_id: string;
   user_name: string;
+  user_whatsapp: string;
   user_type: 'available' | 'rented';
   apartment_title: string;
   apartment_available: boolean;
@@ -14,9 +16,34 @@ export interface UserInterest {
 export const useUserInterests = () => {
   const [interests, setInterests] = useState<UserInterest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { apartments } = useApartments();
 
   useEffect(() => {
     loadInterests();
+
+    // Configurar subscription para atualizações em tempo real
+    const interestsChannel = supabase
+      .channel('user-interests-realtime')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'user_interests' },
+        () => {
+          console.log('Interesses alterados - recarregando lista');
+          loadInterests();
+        }
+      )
+      .subscribe();
+
+    // Configurar polling a cada 2 segundos como backup
+    const pollingInterval = setInterval(() => {
+      console.log('Polling: Atualizando interesses automaticamente');
+      loadInterests();
+    }, 2000); // 2 segundos
+
+    // Cleanup function
+    return () => {
+      supabase.removeChannel(interestsChannel);
+      clearInterval(pollingInterval);
+    };
   }, []);
 
   const loadInterests = async () => {
@@ -24,7 +51,7 @@ export const useUserInterests = () => {
       const { data, error } = await supabase
         .from('user_interests')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true }); // Mais antigo primeiro (quem chegou primeiro)
 
       if (error) {
         console.error('Erro ao carregar interesses:', error);
@@ -42,6 +69,7 @@ export const useUserInterests = () => {
   const addInterest = async (
     apartmentId: string,
     userName: string,
+    userWhatsapp: string,
     apartmentTitle: string,
     apartmentAvailable: boolean
   ) => {
@@ -53,6 +81,7 @@ export const useUserInterests = () => {
         .insert({
           apartment_id: apartmentId,
           user_name: userName,
+          user_whatsapp: userWhatsapp,
           user_type: userType,
           apartment_title: apartmentTitle,
           apartment_available: apartmentAvailable
@@ -64,6 +93,8 @@ export const useUserInterests = () => {
         console.error('Erro ao adicionar interesse:', error);
         return false;
       }
+
+      // Mensagem já registrada no ApartmentDetails.tsx quando usuário clica no WhatsApp
 
       // Atualiza a lista local
       setInterests(prev => [data, ...prev]);
@@ -95,10 +126,15 @@ export const useUserInterests = () => {
     
     interests.forEach(interest => {
       if (!apartmentMap.has(interest.apartment_id)) {
+        // Verificar se o apartamento ainda existe
+        const apartmentExists = apartments.some(apt => apt.id === interest.apartment_id);
+        const currentApartment = apartments.find(apt => apt.id === interest.apartment_id);
+        
         apartmentMap.set(interest.apartment_id, {
           apartment_id: interest.apartment_id,
           apartment_title: interest.apartment_title,
-          apartment_available: interest.apartment_available,
+          apartment_available: apartmentExists ? (currentApartment?.available || false) : false,
+          apartment_exists: apartmentExists,
           interests: []
         });
       }
