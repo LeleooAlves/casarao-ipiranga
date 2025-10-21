@@ -33,8 +33,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
       })
     },
     channel: () => ({
-      on: () => ({ on: () => ({ subscribe: () => {} }) }),
-      subscribe: () => {}
+      on: () => ({
+        on: () => ({
+          subscribe: () => ({ unsubscribe: () => {} })
+        }),
+        subscribe: () => ({ unsubscribe: () => {} })
+      }),
+      subscribe: () => ({ unsubscribe: () => {} })
     }),
     removeChannel: () => {}
   };

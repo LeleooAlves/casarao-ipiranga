@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, MapPin, Bed, Bath, Square, ChevronLeft, ChevronRight, X, Phone, Mail } from 'lucide-react';
+import { ArrowLeft, MapPin, Bed, Bath, Square, ChevronLeft, ChevronRight, X, Phone, Mail, Play } from 'lucide-react';
 import { useApartments } from '../hooks/useApartments';
 import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useUserInterests } from '../hooks/useUserInterests';
+import { useVideoThumbnail } from '../hooks/useVideoThumbnail';
 import WhatsAppButton from '../components/WhatsAppButton';
 
 const ApartmentDetails: React.FC = () => {
@@ -29,7 +30,38 @@ const ApartmentDetails: React.FC = () => {
     type: 'temporary'
   });
 
-  const apartment = getApartmentBySlug(slug || '');
+  const apartment = getApartmentBySlug(slug!);
+
+  // Componente para thumbnail do vídeo
+  const VideoThumbnail: React.FC<{ videoSrc: string; fallbackImage?: string }> = ({ videoSrc, fallbackImage }) => {
+    const { thumbnail, loading } = useVideoThumbnail(videoSrc);
+    
+    return (
+      <div className="relative w-full h-full bg-black">
+        {loading ? (
+          <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+            <div className="animate-pulse text-white text-sm">Carregando...</div>
+          </div>
+        ) : (
+          <img
+            src={thumbnail || fallbackImage || '/placeholder-video.jpg'}
+            alt="Video thumbnail"
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              if (fallbackImage) {
+                (e.target as HTMLImageElement).src = fallbackImage;
+              }
+            }}
+          />
+        )}
+        <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+          <div className="bg-white bg-opacity-90 rounded-full p-4 hover:bg-opacity-100 transition-all">
+            <Play className="h-12 w-12 text-primary" />
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // Função para formatar WhatsApp
   const formatWhatsApp = (value: string) => {
@@ -171,11 +203,11 @@ const ApartmentDetails: React.FC = () => {
     { id: 'location', label: 'Localização' }
   ];
 
-  // Combina imagens e vídeo para o carrossel (apenas se apartamento estiver disponível)
-  const mediaItems = apartment.available ? [
+  // Combina imagens e vídeo para o carrossel
+  const mediaItems = [
     ...apartment.images.map((img, index) => ({ type: 'image', src: img, index })),
     ...(apartment.video ? [{ type: 'video', src: apartment.video, index: apartment.images.length }] : [])
-  ] : [];
+  ];
 
   const openModal = (index: number) => {
     setModalImageIndex(index);
@@ -219,7 +251,7 @@ const ApartmentDetails: React.FC = () => {
           <div className="lg:col-span-2">
             {/* Image Gallery with Carousel ou Informações do Apartamento Alugado */}
             <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-              {apartment.available && mediaItems.length > 0 ? (
+              {mediaItems.length > 0 ? (
                 <div className="relative h-96 group">
                   {/* Main Media Display */}
                   <div 
@@ -227,13 +259,10 @@ const ApartmentDetails: React.FC = () => {
                     onClick={() => openModal(selectedImage)}
                   >
                     {mediaItems[selectedImage]?.type === 'video' ? (
-                      <video
-                        controls
-                        className="w-full h-full object-cover"
-                        poster={apartment.images[0]}
-                      >
-                        <source src={mediaItems[selectedImage].src} type="video/mp4" />
-                      </video>
+                      <VideoThumbnail 
+                        videoSrc={mediaItems[selectedImage].src}
+                        fallbackImage={apartment.images[0]}
+                      />
                     ) : (
                       <img
                         src={mediaItems[selectedImage]?.src}
@@ -244,7 +273,7 @@ const ApartmentDetails: React.FC = () => {
                   </div>
 
                   {/* Navigation Arrows */}
-                  {apartment.available && mediaItems.length > 1 && (
+                  {mediaItems.length > 1 && (
                     <>
                       <button
                         onClick={(e) => {
@@ -268,7 +297,7 @@ const ApartmentDetails: React.FC = () => {
                   )}
 
                   {/* Indicators */}
-                  {apartment.available && mediaItems.length > 1 && (
+                  {mediaItems.length > 1 && (
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
                       {mediaItems.map((_, index) => (
                         <button
@@ -312,12 +341,6 @@ const ApartmentDetails: React.FC = () => {
                         <span className="ml-2">{apartment.bathrooms}</span>
                       </p>
                     </div>
-                    {!apartment.available && (
-                      <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <p className="text-red-700 font-medium">Apartamento Alugado</p>
-                        <p className="text-red-600 text-sm">Imagens não disponíveis</p>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
@@ -563,7 +586,7 @@ const ApartmentDetails: React.FC = () => {
       />
 
       {/* Modal de Visualização em Tela Cheia */}
-      {isModalOpen && apartment.available && mediaItems.length > 0 && (
+      {isModalOpen && mediaItems.length > 0 && (
         <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
           <div className="relative w-full h-full flex items-center justify-center">
             {/* Botão Fechar */}

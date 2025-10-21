@@ -103,17 +103,19 @@ const FAQ: React.FC = () => {
                     <div className="border-t border-gray-200 pt-4">
                       <div className="relative">
                         {playingVideo === video.id ? (
-                          <video
-                            src={video.video_url ?? video.video_file_path ?? undefined}
-                            controls
-                            autoPlay
-                            className="w-full rounded-lg shadow-sm"
-                            poster={video.thumbnail_url ?? undefined}
+                          <div className="relative w-full aspect-video bg-black rounded-lg shadow-sm overflow-hidden">
+                            <video
+                              src={video.video_url ?? video.video_file_path ?? undefined}
+                              controls
+                              autoPlay
+                              className="absolute inset-0 w-full h-full object-contain"
+                              poster={video.thumbnail_url ?? undefined}
                             onLoadStart={() => console.log('Video loading started')}
                             onError={(e) => console.error('Video error:', e)}
-                          >
-                            Seu navegador não suporta o elemento de vídeo.
-                          </video>
+                            >
+                              Seu navegador não suporta o elemento de vídeo.
+                            </video>
+                          </div>
                         ) : (
                           <div className="relative">
                             <div

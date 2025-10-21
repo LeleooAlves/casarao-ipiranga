@@ -1337,11 +1337,13 @@ const Admin: React.FC = () => {
                         Vídeo Atual
                       </label>
                       <div className="relative">
-                        <video
-                          src={currentVideo}
-                          controls
-                          className="w-full max-w-md h-48 object-cover rounded-lg"
-                        />
+                        <div className="relative w-full max-w-md aspect-video bg-black rounded-lg overflow-hidden">
+                          <video
+                            src={currentVideo}
+                            controls
+                            className="absolute inset-0 w-full h-full object-contain"
+                          />
+                        </div>
                         <button
                           type="button"
                           onClick={() => setCurrentVideo(null)}
@@ -1470,12 +1472,14 @@ const Admin: React.FC = () => {
                                 allowFullScreen
                               />
                             ) : (
-                              <video
-                                src={video.video_url ?? video.video_file_path ?? undefined}
-                                controls
-                                className="w-full max-w-md h-48 object-cover rounded-lg"
-                                poster={video.thumbnail_url ?? undefined}
-                              />
+                              <div className="relative w-full max-w-md aspect-video bg-black rounded-lg overflow-hidden">
+                                <video
+                                  src={video.video_url ?? video.video_file_path ?? undefined}
+                                  controls
+                                  className="absolute inset-0 w-full h-full object-contain"
+                                  poster={video.thumbnail_url ?? undefined}
+                                />
+                              </div>
                             )}
                           </div>
                         </div>
@@ -2225,11 +2229,12 @@ const Admin: React.FC = () => {
                           }}
                         />
                       ) : (
-                        <video
-                          src={faqVideoForm.videoFile ? URL.createObjectURL(faqVideoForm.videoFile) : undefined}
-                          controls
-                          preload="metadata"
-                          className="w-full max-w-md h-48 object-cover rounded-lg"
+                        <div className="relative w-full max-w-md aspect-video bg-black rounded-lg overflow-hidden">
+                          <video
+                            src={faqVideoForm.videoFile ? URL.createObjectURL(faqVideoForm.videoFile) : undefined}
+                            controls
+                            preload="metadata"
+                            className="absolute inset-0 w-full h-full object-contain"
                           onLoadStart={() => {
                             console.log('Carregando preview do vídeo...');
                             setVideoPreviewLoading(true);
@@ -2249,6 +2254,7 @@ const Admin: React.FC = () => {
                             setVideoPreviewError('Não foi possível carregar o vídeo. Verifique o formato.');
                           }}
                         />
+                        </div>
                       )}
                       
                       {!videoPreviewLoading && !videoPreviewError && (

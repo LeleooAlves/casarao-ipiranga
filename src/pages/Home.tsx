@@ -248,53 +248,58 @@ const Home: React.FC = () => {
                 </button>
                 
                 {openFaqIndex === index && (
-                  <div className="space-y-4">
-                    <p className="text-gray-700 leading-relaxed">
+                  <div className="flex flex-col lg:flex-row gap-6">
+                    {/* Resposta do FAQ */}
+                    <div className="flex-1 text-gray-700 leading-relaxed whitespace-pre-line">
                       {faq.answer}
-                    </p>
+                    </div>
                     
-                    {/* Preview do Vídeo */}
+                    {/* Preview do Vídeo - Lado Direito (Desktop) / Abaixo (Mobile) */}
                     {(() => {
                       const video = getVideoForQuestion(faq.id);
                       const videoSrc = video?.video_url || video?.video_file_path;
                       const isYouTube = video?.video_url && video.video_url.includes('youtube.com/embed/');
                       
-                      return videoSrc ? (
-                        <div className="bg-gray-100 rounded-lg overflow-hidden">
-                          <div 
-                            className="relative aspect-video bg-gray-200 cursor-pointer group hover:bg-gray-300 transition-colors"
-                            onClick={() => openVideoModal(videoSrc)}
-                          >
-                            {isYouTube ? (
-                              <div className="relative w-full h-full">
-                                <img
-                                  src={video?.thumbnail_url || `https://img.youtube.com/vi/${videoSrc.split('/embed/')[1]}/maxresdefault.jpg`}
-                                  alt="Video thumbnail"
-                                  className="w-full h-full object-cover"
-                                />
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                  <div className="bg-black bg-opacity-60 rounded-full p-4 group-hover:bg-opacity-80 transition-all">
-                                    <Play className="h-8 w-8 text-white" />
+                      if (!videoSrc) return null;
+                      
+                      return (
+                        <div className="w-full lg:w-80 flex-shrink-0">
+                          <div className="bg-gray-100 rounded-lg overflow-hidden">
+                            <div 
+                              className="relative aspect-video bg-gray-200 cursor-pointer group hover:bg-gray-300 transition-colors"
+                              onClick={() => openVideoModal(videoSrc)}
+                            >
+                              {isYouTube ? (
+                                <div className="relative w-full h-full">
+                                  <img
+                                    src={video?.thumbnail_url || `https://img.youtube.com/vi/${videoSrc.split('/embed/')[1]}/maxresdefault.jpg`}
+                                    alt="Video thumbnail"
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="bg-black bg-opacity-60 rounded-full p-4 group-hover:bg-opacity-80 transition-all">
+                                      <Play className="h-8 w-8 text-white" />
+                                    </div>
                                   </div>
                                 </div>
+                              ) : (
+                                <video
+                                  src={videoSrc}
+                                  className="w-full h-full object-contain bg-black"
+                                  poster={video?.thumbnail_url || undefined}
+                                  muted
+                                  preload="metadata"
+                                />
+                              )}
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+                                <p className="text-white text-xs font-medium text-center">
+                                  Clique no vídeo para entender melhor
+                                </p>
                               </div>
-                            ) : (
-                              <video
-                                src={videoSrc}
-                                className="w-full h-full object-cover"
-                                poster={video?.thumbnail_url || undefined}
-                                muted
-                                preload="metadata"
-                              />
-                            )}
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-                              <p className="text-white text-sm font-medium">
-                                Clique para assistir a explicação em vídeo
-                              </p>
                             </div>
                           </div>
                         </div>
-                      ) : null;
+                      );
                     })()}
                   </div>
                 )}
@@ -323,17 +328,19 @@ const Home: React.FC = () => {
                 allowFullScreen
               />
             ) : (
-              <video
-                src={videoModalOpen}
-                controls
-                autoPlay
-                className="w-full h-auto max-h-[80vh]"
-                onError={() => {
-                  console.error('Erro ao carregar vídeo:', videoModalOpen);
-                }}
-              >
-                Seu navegador não suporta a reprodução de vídeos.
-              </video>
+              <div className="relative w-full max-w-4xl max-h-[80vh] aspect-video bg-black rounded-lg overflow-hidden">
+                <video
+                  src={videoModalOpen}
+                  controls
+                  autoPlay
+                  className="absolute inset-0 w-full h-full object-contain"
+                  onError={() => {
+                    console.error('Erro ao carregar vídeo:', videoModalOpen);
+                  }}
+                >
+                  Seu navegador não suporta a reprodução de vídeos.
+                </video>
+              </div>
             )}
           </div>
         </div>

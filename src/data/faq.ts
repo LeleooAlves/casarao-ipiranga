@@ -4,31 +4,51 @@ export const faqs: FAQ[] = [
   {
     id: '1',
     question: 'Qual a diferença entre moradia fixa e temporada?',
-    answer: 'Moradia fixa são contratos de longo prazo (mínimo 12 meses) com valores mensais reduzidos. Temporada são estadias curtas (diárias/semanais) ideais para turismo e viagens de negócios.',
+    answer: `Locação para Moradia fixa é ideal para quem procura um lugar para morar de forma fixa.
+
+Locação para Temporada – Ideal para quem precisa de estadias curtas (diárias – semanas ou poucos meses).
+Seja qual for a sua necessidade, temos um ambiente tranquilo e seguro especialmente preparado para você!`,
     category: 'Tipos de Moradia'
   },
   {
     id: '2',
     question: 'Quais documentos preciso para alugar um apartamento para moradia fixa?',
-    answer: 'Para moradia fixa você precisa: RG, CPF, comprovante de renda (3x o valor do aluguel), comprovante de residência e referências pessoais. Também pode ser necessário fiador ou seguro fiança.',
+    answer: `Você precisa de RG, CPF, comprovante de renda ou holerite e preencher ficha para análise para aprovação, podendo também ser necessário outros documentos. *consulte nosso departamento de locação.`,
     category: 'Documentação'
   },
   {
     id: '3',
     question: 'Como funciona o pagamento do aluguel?',
-    answer: 'O pagamento pode ser feito via PIX, transferência bancária ou boleto. Para moradia fixa, o vencimento é todo dia 10. Para temporada, o pagamento é antecipado no check-in.',
+    answer: `Para moradia fixa, o pagamento deverá ser feito por boleto e o vencimento será todo dia 08.
+Para locação de temporada, o pagamento para temporada deverá ser feito de forma antecipada e negociada em contrato.`,
     category: 'Pagamento'
   },
   {
     id: '4',
     question: 'Os apartamentos são mobiliados?',
-    answer: 'Sim, todos os nossos apartamentos são completamente mobiliados e equipados. Incluem móveis, eletrodomésticos, utensílios de cozinha, roupas de cama e banho.',
+    answer: `Somente nossos apartamentos para temporada são mobiliados
+Incluem móveis, eletrodomésticos, utensílios de cozinha, roupas de cama, banho, internet wi-fi coletivo.
+Para moradia fixa, não temos apartamentos mobiliados – consulte disponibilidade de semi-mobiliados - nesta modalidade algumas unidades incluem cama, fogão, geladeira e gabinete de cozinha.`,
     category: 'Apartamentos'
   },
   {
     id: '5',
     question: 'Posso visitar os apartamentos antes de alugar?',
-    answer: 'Sim, oferecemos visitas agendadas para todos os apartamentos. Entre em contato conosco pelo WhatsApp para agendar sua visita em um horário conveniente.',
+    answer: `Sim, oferecemos visitas agendadas para todos os apartamentos. Entre em contato conosco para agendar a visita`,
     category: 'Visitas'
+  },
+  {
+    id: '6',
+    question: 'Como funciona a multa rescisória de contrato de moradia fixa?',
+    answer: `Para moradia fixa, após aprovação, temos um contrato padrão previsto na lei do inquilinato.
+Nossos contratos são no total de 30 (trinta meses), porém, fica estipulado em contrato que caso o morador queira finalizar e o contrato de locação e devolver a unidade locada antes de completar 12 (doze) estipulamos uma multa de 3 (três) aluguéis que serão calculados de forma proporcional ao tempo que falta para completar os 30 (trinta) meses.
+O cálculo é feito da seguinte forma:
+• Some 3 (três) aluguéis = "x" valor
+• "x" dividido por 30 = "y"
+• Número de meses completos e alugados – (menos) número de meses faltantes para completar os 30 (trinta meses) = "Z" meses
+"z" multiplicado por "y", o resultado será = valor da multa a ser paga pelo inquilino.
+
+Para quem desejar entregar a unidade locada após completar 12 (doze) meses, isentamos da referida multa contratual.`,
+    category: 'Contrato'
   }
 ];
