@@ -82,7 +82,7 @@ const Home: React.FC = () => {
         />
         <div className="relative z-10 text-center text-gray-900 max-w-6xl mx-auto px-4 pt-32">
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-10 leading-tight text-gray-900">
-            O maior complexo residencial de studios e kitnets do brasil
+            O Maior Complexo Residencial de Studios e Kitnets do Brasil
           </h1>
           <button
             onClick={scrollToContent}
