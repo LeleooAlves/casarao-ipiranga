@@ -51,7 +51,8 @@ const Admin: React.FC = () => {
     bathrooms: '',
     condominium: '' as 'casarao-museu' | 'casarao-fico' | '',
     amenities: [] as string[],
-    nearbyAttractions: ''
+    nearbyAttractions: '',
+    monthlyPrice: ''
   });
   
   const [apartmentImages, setApartmentImages] = useState<File[]>([]);
@@ -82,7 +83,8 @@ const Admin: React.FC = () => {
     condominium: '' as 'casarao-museu' | 'casarao-fico' | '',
     amenities: [] as string[],
     nearbyAttractions: '',
-    available: true
+    available: true,
+    monthlyPrice: ''
   });
   
   const [editImages, setEditImages] = useState<File[]>([]);
@@ -156,7 +158,8 @@ const Admin: React.FC = () => {
         condominium: apartment.location.condominium,
         amenities: apartment.amenities,
         nearbyAttractions: '',
-        available: apartment.available
+        available: apartment.available,
+        monthlyPrice: apartment.price.monthly > 0 ? apartment.price.monthly.toString() : ''
       });
       
       // Carregar imagens e vídeo atuais
@@ -197,7 +200,10 @@ const Admin: React.FC = () => {
         title: editForm.title,
         slug: editForm.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
         description: editForm.description,
-        price: { monthly: 0, daily: 0 }, // Manter preços existentes
+        price: { 
+          monthly: editForm.type === 'fixed' ? (parseFloat(editForm.monthlyPrice) || 0) : 0, 
+          daily: 0 
+        },
         images: finalImages,
         video: finalVideo || undefined,
         amenities: editForm.amenities,
@@ -244,7 +250,8 @@ const Admin: React.FC = () => {
       condominium: '',
       amenities: [],
       nearbyAttractions: '',
-      available: true
+      available: true,
+      monthlyPrice: ''
     });
     setEditImages([]);
     setEditVideo(null);
@@ -483,7 +490,8 @@ const Admin: React.FC = () => {
       bathrooms: '',
       condominium: '',
       amenities: [],
-      nearbyAttractions: ''
+      nearbyAttractions: '',
+      monthlyPrice: ''
     });
     setApartmentImages([]);
     setApartmentVideo(null);
@@ -495,6 +503,12 @@ const Admin: React.FC = () => {
     
     if (!apartmentForm.title || !apartmentForm.condominium || !apartmentForm.description) {
       showPopup('error', 'Campos Obrigatórios', 'Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    // Validar preço para moradia fixa
+    if (apartmentForm.type === 'fixed' && (!apartmentForm.monthlyPrice || parseFloat(apartmentForm.monthlyPrice) <= 0)) {
+      showPopup('error', 'Preço Obrigatório', 'Por favor, informe o valor mensal para apartamentos de moradia fixa.');
       return;
     }
 
@@ -541,11 +555,14 @@ const Admin: React.FC = () => {
           type: 'Local'
         }));
 
+      // Definir preços baseado no tipo
+      const monthlyPrice = apartmentForm.type === 'fixed' ? (parseFloat(apartmentForm.monthlyPrice) || 0) : 0;
+      
       // Criar objeto do apartamento
       const newApartment = {
         title: apartmentForm.title,
         description: apartmentForm.description,
-        price: { monthly: 0, daily: 0 }, // Valores serão sempre "a consultar"
+        price: { monthly: monthlyPrice, daily: 0 }, // Moradia fixa tem preço mensal, outros "a consultar"
         images: imageUrls,
         video: videoUrl,
         amenities: apartmentForm.amenities,
@@ -1087,7 +1104,10 @@ const Admin: React.FC = () => {
                                 <div className="flex items-center justify-between">
                                   <div className="text-sm">
                                     <div className="text-gray-600 mb-1">
-                                      Valores a consultar
+                                      {apartment.type === 'fixed' && apartment.price.monthly > 0 
+                                        ? `R$ ${apartment.price.monthly.toLocaleString('pt-BR')}/mês`
+                                        : 'Valores a consultar'
+                                      }
                                     </div>
                                   </div>
                                   
@@ -1189,6 +1209,27 @@ const Admin: React.FC = () => {
                       </select>
                     </div>
                   </div>
+
+                  {/* Campo de Preço Mensal - só para Moradia Fixa */}
+                  {editForm.type === 'fixed' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Valor Mensal (R$) *
+                      </label>
+                      <input
+                        type="number"
+                        value={editForm.monthlyPrice}
+                        onChange={(e) => setEditForm({ ...editForm, monthlyPrice: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Ex: 2500"
+                        min="0"
+                        step="0.01"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Valor do aluguel mensal para moradia fixa
+                      </p>
+                    </div>
+                  )}
 
                   {/* Descrição */}
                   <div>
@@ -1718,6 +1759,29 @@ const Admin: React.FC = () => {
                     </select>
                   </div>
                 </div>
+
+                {/* Campo de Preço Mensal - só para Moradia Fixa */}
+                {apartmentForm.type === 'fixed' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Valor Mensal (R$) *
+                    </label>
+                    <input
+                      type="number"
+                      name="monthlyPrice"
+                      value={apartmentForm.monthlyPrice}
+                      onChange={handleFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Ex: 2500"
+                      min="0"
+                      step="0.01"
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Valor do aluguel mensal para moradia fixa
+                    </p>
+                  </div>
+                )}
 
                 {/* Descrição */}
                 <div>

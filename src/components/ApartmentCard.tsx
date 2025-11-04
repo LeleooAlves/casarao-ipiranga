@@ -245,7 +245,10 @@ const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment, onApartmentCli
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="text-lg font-bold text-primary">
-              Valores a consultar
+              {apartment.type === 'fixed' && apartment.price.monthly > 0 
+                ? `R$ ${apartment.price.monthly.toLocaleString('pt-BR')}/mês`
+                : 'Valores a consultar'
+              }
             </div>
           </div>
         </div>
